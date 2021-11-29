@@ -1,14 +1,14 @@
 import sys
+import time
+import json
 import os.path
 from selenium import webdriver
 from selenium.webdriver.chrome import service as fs
-from selenium.webdriver.common.keys import Keys
+# from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from logging import getLogger, StreamHandler, DEBUG
-import time
-import json
 from urllib.parse import urlparse
 
 options = webdriver.ChromeOptions()
@@ -54,7 +54,7 @@ def save_pdf(driver, wait):
     time.sleep(10)
 
 
-def check_page(driver, page_url, samedomain, parentdir):
+def check_page(driver, page_url, samedomain, parentdir, xpath):
     crnt_url = urlparse(page_url)
     print(crnt_url.scheme)
     print(crnt_url.netloc)
@@ -62,31 +62,31 @@ def check_page(driver, page_url, samedomain, parentdir):
     print(crnt_url.query)
     print('---')
 
-    prntelem = driver.find_element(by=By.XPATH, value='//*[@id="bodyContent"]/div[4]/table/tbody/tr/td[1]/div[1]/ul[1]')
+    prntelem = driver.find_element(by=By.XPATH, value=xpath)
     elems = prntelem.find_elements(By.XPATH, 'descendant::*[@href]')
 
     if prntelem:
         for elem in elems:
             lnk_url = urlparse(elem.get_attribute("href"))
-            if samedomain and crnt_url.netloc == lnk_url.netloc:
+            if samedomain:
+                if crnt_url.netloc == lnk_url.netloc:
+                    print(lnk_url.netloc)
+            else:
                 print(lnk_url.netloc)
 
 
-
-
-
-def start(driver, wait, page_url, samedomain, parentdir):
+def start(driver, wait, page_url, samedomain, parentdir, xpath):
     driver.implicitly_wait(5)
     driver.get(page_url)
     # save_pdf(driver, wait)
-    check_page(driver, page_url, samedomain, parentdir)
+    check_page(driver, page_url, samedomain, parentdir, xpath)
 
 
-def init(top_url, samedomain, parentdir):
+def init(top_url, samedomain, parentdir, xpath):
     chrome_servie = fs.Service(executable_path="chromedriver.exe")
     driver = webdriver.Chrome(service=chrome_servie, options=options)
     wait = WebDriverWait(driver, 5)
-    start(driver, wait, top_url, samedomain, parentdir)
+    start(driver, wait, top_url, samedomain, parentdir, xpath)
     driver.quit()
 
 
@@ -101,20 +101,24 @@ def main(args):
         return
 
     samedomain = input('same domain only ? (y or n) : ')
-    if samedomain == 'n' :
+    if samedomain == 'n':
         samedomain = False
     else:
         samedomain = True
 
     parentdir = input('parent dirctory ? (y or n) : ')
-    if parentdir == 'y' :
+    if parentdir == 'y':
         parentdir = True
     else:
         parentdir = False
 
-    init(top_url, samedomain, parentdir)
+    xpath = input('links in target element ? (XPATH)Default /html/body : ')
+    if not xpath:
+        xpath = '/html/body'
+    # '//*[@id="bodyContent"]/div[4]/table/tbody/tr/td[1]/div[1]/ul[1]'
+
+    init(top_url, samedomain, parentdir, xpath)
 
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-
