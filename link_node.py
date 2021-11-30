@@ -19,4 +19,3 @@ class LinkNode:
     def apped_link_nodes(self, linknodes):
         self.linknodes = linknodes
 
-
