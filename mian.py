@@ -42,8 +42,7 @@ appState = {
     "isCssBackgroundEnabled": True
 }
 options.add_experimental_option("prefs", {
-    "printing.print_preview_sticky_settings.appState":
-        json.dumps(appState),
+    "printing.print_preview_sticky_settings.appState": json.dumps(appState),
     "download.default_directory": '~/Downloads'
 })
 options.add_argument('--kiosk-printing')
@@ -54,9 +53,12 @@ handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
+root_node = None
 
 
-def save_pdf(driver, wait, prntnode):
+def save_pdf(driver, wait, crntnode):
+    crntnode.create_pdf = True
+    return
     wait.until(EC.presence_of_all_elements_located)
     driver.execute_script('window.print()')
     time.sleep(10)
@@ -77,18 +79,31 @@ def check_page(driver, page_url, linknodes, app_options):
 
     prntnode.link_check = True
     prntnode.append_link_nodes(child_linknodes)
-    linknodes.inc_check_index()
 
 
 def start(driver, wait, linknodes, page_url, crnt_depth, app_options):
     driver.implicitly_wait(5)
     driver.get(page_url)
-    # save_pdf(driver, wait, prntnode)
+    crntnode = linknodes.get_current_node()
+    save_pdf(driver, wait, crntnode)
     if crnt_depth < app_options['depth']:
         check_page(driver, page_url, linknodes, app_options)
+    linknodes.inc_check_index()
 
-    crnt_depth += 1
-    pass
+    if crnt_depth < app_options['depth']:
+        if crntnode.child_linknodes.link_count > 0:
+            targetnode = crntnode.child_linknodes.get_current_node()
+            if targetnode:
+                crnt_depth += 1
+                start(driver, wait, crntnode.child_linknodes, page_url, crnt_depth, app_options)
+            else:
+
+                pass
+
+    elif crnt_depth == app_options['depth']:
+        pass
+    else:
+        pass
 
 
 def init(top_url, app_options):
@@ -96,10 +111,11 @@ def init(top_url, app_options):
     driver = webdriver.Chrome(service=chrome_servie, options=options)
     wait = WebDriverWait(driver, 5)
 
-    toplnk = LinkNode(top_url, None)
+    global root_node
+    root_node = LinkNode(top_url, None)
     linknodes = LinkNodes(top_url, None, app_options)
-    linknodes.append_node(toplnk)
-    toplnk.set_current_linknodes(linknodes)
+    linknodes.append_node(root_node)
+    root_node.set_current_linknodes(linknodes)
 
     start(driver, wait, linknodes, top_url, 1, app_options)
     driver.quit()
