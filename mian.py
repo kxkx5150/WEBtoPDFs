@@ -62,35 +62,46 @@ def save_pdf(driver, wait, prntnode):
     time.sleep(10)
 
 
-def check_page(driver, page_url, samedomain, prntcheck, xpath, prntnode):
-    prntelem = driver.find_element(by=By.XPATH, value=xpath)
+def check_page(driver, page_url, linknodes, app_options):
+    prntnode = linknodes.get_current_node()
+    prntelem = driver.find_element(by=By.XPATH, value=app_options['xpath'])
     elems = prntelem.find_elements(By.XPATH, 'descendant::*[@href]')
-    linknodes = LinkNodes(page_url, prntnode, samedomain, prntcheck)
+    child_linknodes = LinkNodes(page_url, prntnode, app_options)
 
     if prntelem:
         for elem in elems:
             href = elem.get_attribute("href")
             lnknod = LinkNode(href, prntnode)
-            linknodes.check_append(lnknod)
-            
-    prntnode.apped_link_nodes(linknodes)
-    return prntnode
+            child_linknodes.check_append(lnknod)
+            lnknod.set_current_linknodes(child_linknodes)
+
+    prntnode.link_check = True
+    prntnode.append_link_nodes(child_linknodes)
+    linknodes.inc_check_index()
 
 
-def start(driver, wait, page_url, samedomain, prntcheck, xpath, prntnode):
+def start(driver, wait, linknodes, page_url, crnt_depth, app_options):
     driver.implicitly_wait(5)
     driver.get(page_url)
     # save_pdf(driver, wait, prntnode)
-    lnknod = check_page(driver, page_url, samedomain, prntcheck, xpath, prntnode)
-    print(lnknod)
+    if crnt_depth < app_options['depth']:
+        check_page(driver, page_url, linknodes, app_options)
+
+    crnt_depth += 1
+    pass
 
 
-def init(top_url, samedomain, prntcheck, xpath):
+def init(top_url, app_options):
     chrome_servie = fs.Service(executable_path="chromedriver.exe")
     driver = webdriver.Chrome(service=chrome_servie, options=options)
     wait = WebDriverWait(driver, 5)
+
     toplnk = LinkNode(top_url, None)
-    start(driver, wait, top_url, samedomain, prntcheck, xpath, toplnk)
+    linknodes = LinkNodes(top_url, None, app_options)
+    linknodes.append_node(toplnk)
+    toplnk.set_current_linknodes(linknodes)
+
+    start(driver, wait, linknodes, top_url, 1, app_options)
     driver.quit()
 
 
@@ -121,7 +132,14 @@ def main(args):
         xpath = '/html/body'
     # '//*[@id="bodyContent"]/div[4]/table/tbody/tr/td[1]/div[1]/ul[1]'
 
-    init(top_url, samedomain, prntcheck, xpath)
+    app_options = {
+        'samedomain': samedomain,
+        'prntcheck': prntcheck,
+        'xpath': xpath,
+        'depth': 2
+    }
+
+    init(top_url, app_options)
 
 
 if __name__ == '__main__':

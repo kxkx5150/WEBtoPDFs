@@ -5,8 +5,11 @@ class LinkNode:
     org_url = None
     dirname = None
     parse_url = None
+
     prntnode = None
-    linknodes = None
+    current_linknodes = None
+    child_linknodes = None
+
     link_check = False
     create_pdf = False
 
@@ -16,6 +19,8 @@ class LinkNode:
         self.parse_url = urlparse(page_url)
         self.prntnode = prntnode
 
-    def apped_link_nodes(self, linknodes):
-        self.linknodes = linknodes
+    def append_link_nodes(self, linknodes):
+        self.child_linknodes = linknodes
 
+    def set_current_linknodes(self, linknodes):
+        self.current_linknodes = linknodes;
