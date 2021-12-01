@@ -12,6 +12,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from logging import getLogger, StreamHandler, DEBUG
 from link_node import LinkNode
 from link_nodes import LinkNodes
+import allow_urls
+import deny_urls
 
 options = webdriver.ChromeOptions()
 options.add_argument('--disable-gpu')
@@ -56,38 +58,40 @@ logger.propagate = False
 root_node = None
 
 
-def save_pdf(driver, wait, crntnode):
+def save_pdf(driver, crntnode):
     crntnode.create_pdf = True
-    return
-    wait.until(EC.presence_of_all_elements_located)
     driver.execute_script('window.print()')
     time.sleep(10)
 
 
-def check_page(driver, page_url, linknodes, app_options):
-    prntnode = linknodes.get_current_node()
+def check_page(driver, crntnode, app_options):
+    driver.implicitly_wait(5)
     prntelem = driver.find_element(by=By.XPATH, value=app_options['xpath'])
     elems = prntelem.find_elements(By.XPATH, 'descendant::*[@href]')
-    child_linknodes = LinkNodes(page_url, prntnode, app_options)
+    child_linknodes = LinkNodes(crntnode.org_url, crntnode, app_options)
 
     if prntelem:
         for elem in elems:
             href = elem.get_attribute("href")
-            lnknod = LinkNode(href, prntnode)
+            if href.find('mailto:') == 0:
+                continue
+            lnknod = LinkNode(href, crntnode)
             child_linknodes.check_append(lnknod)
             lnknod.set_current_linknodes(child_linknodes)
 
-    prntnode.link_check = True
-    prntnode.append_link_nodes(child_linknodes)
+    crntnode.link_check = True
+    crntnode.append_link_nodes(child_linknodes)
 
 
-def start(driver, wait, linknodes, page_url, crnt_depth, app_options):
-    driver.implicitly_wait(5)
-    driver.get(page_url)
+def start(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
-    save_pdf(driver, wait, crntnode)
+    driver.get(crntnode.org_url)
+    wait = WebDriverWait(driver, 10)
+    wait.until(EC.presence_of_all_elements_located)
+    save_pdf(driver, crntnode)
+
     if crnt_depth < app_options['depth']:
-        check_page(driver, page_url, linknodes, app_options)
+        check_page(driver, crntnode, app_options)
     linknodes.inc_check_index()
 
     if crnt_depth < app_options['depth']:
@@ -95,29 +99,45 @@ def start(driver, wait, linknodes, page_url, crnt_depth, app_options):
             targetnode = crntnode.child_linknodes.get_current_node()
             if targetnode:
                 crnt_depth += 1
-                start(driver, wait, crntnode.child_linknodes, page_url, crnt_depth, app_options)
+                print(' ' * crnt_depth + 'down : ' + targetnode.org_url)
+                start(driver, crntnode.child_linknodes, crnt_depth, app_options)
             else:
+                next_linknode(driver, linknodes, crnt_depth, app_options)
 
-                pass
+        else:
+            next_linknode(driver, linknodes, crnt_depth, app_options)
 
     elif crnt_depth == app_options['depth']:
-        pass
+        next_linknode(driver, linknodes, crnt_depth, app_options)
+
     else:
+        pass
+
+
+def next_linknode(driver, linknodes, crnt_depth, app_options):
+    crntnode = linknodes.get_current_node()
+    if crntnode:
+        print(' ' * crnt_depth + 'next : ' + crntnode.org_url)
+        start(driver, linknodes, crnt_depth, app_options)
+    else:
+        print('up')
         pass
 
 
 def init(top_url, app_options):
     chrome_servie = fs.Service(executable_path="chromedriver.exe")
     driver = webdriver.Chrome(service=chrome_servie, options=options)
-    wait = WebDriverWait(driver, 5)
 
     global root_node
     root_node = LinkNode(top_url, None)
     linknodes = LinkNodes(top_url, None, app_options)
     linknodes.append_node(root_node)
     root_node.set_current_linknodes(linknodes)
+    if linknodes.link_count < 1:
+        print('url error')
+        return
 
-    start(driver, wait, linknodes, top_url, 1, app_options)
+    start(driver, linknodes, 1, app_options)
     driver.quit()
 
 
@@ -152,7 +172,9 @@ def main(args):
         'samedomain': samedomain,
         'prntcheck': prntcheck,
         'xpath': xpath,
-        'depth': 2
+        'depth': 2,
+        'allow_urls': allow_urls.urls,
+        'deny_urls': deny_urls.urls
     }
 
     init(top_url, app_options)

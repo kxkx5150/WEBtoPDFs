@@ -14,7 +14,7 @@ class LinkNode:
     create_pdf = False
 
     def __init__(self, page_url, prntnode):
-        self.org_url = page_url
+        self.org_url = page_url.rsplit('#', 1)[0]
         self.dirname = page_url.rsplit('/', 1)[0]
         self.parse_url = urlparse(page_url)
         self.prntnode = prntnode
