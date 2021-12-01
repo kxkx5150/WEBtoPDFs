@@ -24,3 +24,4 @@ class LinkNode:
 
     def set_current_linknodes(self, linknodes):
         self.current_linknodes = linknodes;
+

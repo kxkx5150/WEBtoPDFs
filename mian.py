@@ -61,7 +61,7 @@ root_node = None
 def save_pdf(driver, crntnode):
     crntnode.create_pdf = True
     driver.execute_script('window.print()')
-    time.sleep(10)
+    time.sleep(7)
 
 
 def check_page(driver, crntnode, app_options):
@@ -120,8 +120,18 @@ def next_linknode(driver, linknodes, crnt_depth, app_options):
         print(' ' * crnt_depth + 'next : ' + crntnode.org_url)
         start(driver, linknodes, crnt_depth, app_options)
     else:
-        print('up')
-        pass
+        lnknds = linknodes
+        while True:
+            crnt_depth -= 1
+            if crnt_depth < 2:
+                break
+
+            prntnode = lnknds.prntnode
+            lnknds = prntnode.current_linknodes
+            crntnode = lnknds.get_current_node()
+            if crntnode:
+                start(driver, lnknds, crnt_depth, app_options)
+                break
 
 
 def init(top_url, app_options):
@@ -157,7 +167,7 @@ def main(args):
     else:
         samedomain = True
 
-    prntcheck = input('parent dirctory ? (y or n)Default y: ')
+    prntcheck = input('parent dirctory ? (y or n)Default y : ')
     if prntcheck == 'n':
         prntcheck = False
     else:
@@ -166,13 +176,18 @@ def main(args):
     xpath = input('links in target element ? (XPATH)Default /html/body : ')
     if not xpath:
         xpath = '/html/body'
-    # '//*[@id="bodyContent"]/div[4]/table/tbody/tr/td[1]/div[1]/ul[1]'
+
+    depth = input('Depth ? Default 2 : ')
+    try:
+        depth = int(depth)
+    except ValueError:
+        depth = 2
 
     app_options = {
         'samedomain': samedomain,
         'prntcheck': prntcheck,
         'xpath': xpath,
-        'depth': 2,
+        'depth': depth,
         'allow_urls': allow_urls.urls,
         'deny_urls': deny_urls.urls
     }
@@ -182,3 +197,4 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+

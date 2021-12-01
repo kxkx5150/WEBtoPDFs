@@ -67,3 +67,4 @@ class LinkNodes:
     def inc_check_index(self):
         if self.check_index < self.link_count:
             self.check_index += 1
+
