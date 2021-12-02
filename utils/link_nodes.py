@@ -1,4 +1,6 @@
 import os
+import requests
+import mimetypes
 
 
 class LinkNodes:
@@ -14,6 +16,7 @@ class LinkNodes:
 
     allow_urls = {}
     deny_urls = {}
+    deny_exts = {}
 
     def __init__(self, page_url, prntnode, app_options):
         self.page_url = page_url
@@ -21,16 +24,14 @@ class LinkNodes:
 
         self.samedomain = app_options['samedomain']
         self.prntcheck = app_options['prntcheck']
+
         self.allow_urls = app_options['allow_urls']
         self.deny_urls = app_options['deny_urls']
+        self.deny_exts = app_options['deny_exts']
 
         self.link_nodes = []
 
     def check_append(self, lnknod):
-        ext = os.path.splitext(lnknod.org_url)
-
-
-
         if len(self.allow_urls) > 0:
             for aurl in self.allow_urls:
                 if aurl[-1] == '/':
@@ -48,6 +49,15 @@ class LinkNodes:
                 self.append_node(lnknod)
 
     def append_node(self, lnknod):
+        if lnknod.org_url.find('mailto:') == 0:
+            return
+
+        response = requests.get(lnknod.org_url)
+        content_type = response.headers['content-type']
+        extension = mimetypes.guess_extension(content_type)
+        if extension and extension in self.deny_exts:
+            return
+
         if len(self.deny_urls) > 0:
             for durl in self.deny_urls:
                 if durl[-1] == '/':

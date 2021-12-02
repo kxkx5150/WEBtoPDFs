@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
-from utils import allow_urls, deny_urls
+from utils import allow_urls, deny_urls, deny_exts
 
 options = webdriver.ChromeOptions()
 options.add_argument('--disable-gpu')
@@ -71,8 +71,6 @@ def check_page(driver, crntnode, app_options):
     if prntelem:
         for elem in elems:
             href = elem.get_attribute("href")
-            if href.find('mailto:') == 0:
-                continue
             lnknod = LinkNode(href, crntnode)
             child_linknodes.check_append(lnknod)
             lnknod.set_current_linknodes(child_linknodes)
@@ -185,7 +183,8 @@ def main(args):
         'xpath': xpath,
         'depth': depth,
         'allow_urls': allow_urls.urls,
-        'deny_urls': deny_urls.urls
+        'deny_urls': deny_urls.urls,
+        'deny_exts': deny_exts.extensions
     }
 
     init(top_url, app_options)
@@ -193,4 +192,3 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-
