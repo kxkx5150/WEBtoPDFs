@@ -1,17 +1,15 @@
 import glob
-import shutil
 import sys
 import json
 import os.path
 import platform
 import time
-
 from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome import service as fs
-# from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support import expected_conditions
 from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
@@ -23,8 +21,6 @@ handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
-root_node = None
-file_name_index = 0
 
 options = webdriver.ChromeOptions()
 pltfrm = platform.system()
@@ -67,13 +63,16 @@ options.add_experimental_option("prefs",
                                 )
 
 
-def save_pdf(driver, crntnode):
+def save_pdf(driver, crntnode, app_options):
+    if crntnode.org_url in app_options['created_urls']:
+        return
+    app_options['created_urls'].append(crntnode.org_url)
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
-    check_download_pdf(driver, crntnode)
+    check_download_pdf(crntnode, app_options)
 
 
-def check_download_pdf(driver, crntnode):
+def check_download_pdf(crntnode, app_options):
     timeout_second = 10
     for i in range(timeout_second + 1):
         dlfilenames = glob.glob(f'{download_folder}\\*.*')
@@ -81,15 +80,15 @@ def check_download_pdf(driver, crntnode):
             if fname.find(crntnode.title) > -1:
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
-                    rename_pdf(fname, crntnode)
+                    rename_pdf(fname, app_options)
 
         time.sleep(1)
 
 
-def rename_pdf(fname, crntnode):
-    global file_name_index
-    file_name_index = file_name_index+1
-    os.rename(fname, download_folder + '\\pdf_downloader\\' + 'pdf_' + str(file_name_index).zfill(5) + '.pdf')
+def rename_pdf(fname, app_options):
+    app_options['filename_index'] += 1
+    os.rename(fname, app_options['download_dir'] + '\\' +
+              'pdf_' + str(app_options['filename_index']).zfill(5) + '.pdf')
 
 
 def check_page(driver, crntnode, app_options):
@@ -111,10 +110,10 @@ def check_page(driver, crntnode, app_options):
 def start(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
     driver.get(crntnode.org_url)
-    WebDriverWait(driver, 15).until(EC.presence_of_all_elements_located)
+    WebDriverWait(driver, 15).until(expected_conditions.presence_of_all_elements_located)
     crntnode.set_title(driver.title)
     print('   ' * crnt_depth + crntnode.org_url)
-    save_pdf(driver, crntnode)
+    save_pdf(driver, crntnode, app_options)
 
     if crnt_depth < app_options['depth']:
         check_page(driver, crntnode, app_options)
@@ -165,19 +164,27 @@ def make_dir(dirpath):
 
 
 def init(top_url, app_options):
-    chrome_servie = fs.Service(executable_path="chromedriver.exe")
+    chrome_servie = fs.Service(executable_path=ChromeDriverManager().install())
     driver = webdriver.Chrome(service=chrome_servie, options=options)
 
-    global root_node
-    root_node = LinkNode(top_url, None)
+    lnode = LinkNode(top_url, None)
     linknodes = LinkNodes(top_url, None, app_options)
-    linknodes.append_node(root_node)
-    root_node.set_current_linknodes(linknodes)
+    linknodes.append_node(lnode)
+    lnode.set_current_linknodes(linknodes)
+    app_options['root_node'] = lnode
+
     if linknodes.link_count < 1:
         print('url error')
         return
 
-    make_dir(download_folder + '\\pdf_downloader')
+    diridx = 0
+    while True:
+        diridx += 1
+        if not os.path.exists(download_folder + '\\pdf_downloader' + str(diridx)):
+            break
+
+    app_options['download_dir'] = download_folder + '\\pdf_downloader' + str(diridx)
+    make_dir(app_options['download_dir'])
     start(driver, linknodes, 1, app_options)
     driver.quit()
 
@@ -223,7 +230,11 @@ def main(args):
         'depth': depth,
         'allow_urls': allow_urls.urls,
         'deny_urls': deny_urls.urls,
-        'deny_exts': deny_exts.extensions
+        'deny_exts': deny_exts.extensions,
+        'download_dir': download_folder,
+        'filename_index': 0,
+        'root_node': None,
+        'created_urls': []
     }
 
     init(top_url, app_options)
