@@ -2,8 +2,8 @@
 # url         https://xxxx.com/xxx/xxx.html
 # directory   https://xxxx.com/xxx/
 urls = {
-    # 'http://www.brokenthorn.com/Resources/',
-    # 'http://www.brokenthorn.com/Resources/OSDev9.html',
-    # 'http://www.brokenthorn.com/Resources/OSDev10.html'
+    # r'http://www.brokenthorn.com/Resources/',
+    # r'http://www.brokenthorn.com/Resources/OSDev9.html',
+    # r'http://www.brokenthorn.com/Resources/OSDev10.html'
 }
 

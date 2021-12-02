@@ -1,7 +1,11 @@
+import glob
+import shutil
 import sys
 import json
 import os.path
 import platform
+import time
+
 from selenium import webdriver
 from selenium.webdriver.chrome import service as fs
 # from selenium.webdriver.common.keys import Keys
@@ -20,6 +24,21 @@ logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
 root_node = None
+file_name_index = 0
+
+options = webdriver.ChromeOptions()
+pltfrm = platform.system()
+download_folder = ''
+if pltfrm == 'Darwin':
+    options.add_argument('~/Library/Application Support/Google/Chrome')
+    download_folder = '~/Downloads'
+elif pltfrm == 'Linux':
+    options.add_argument('~/.config/google-chrome')
+    download_folder = '~/Downloads'
+else:
+    options.add_argument('--user-data-dir=C:\\Users\\' + os.environ['USERNAME'] +
+                         '\\AppData\\Local\\Google\\Chrome\\User Data')
+    download_folder = 'C:\\Users\\' + os.environ['USERNAME'] + '\\Downloads'
 
 appState = {
     "recentDestinations": [
@@ -35,7 +54,6 @@ appState = {
     "isCssBackgroundEnabled": True,
     "isHeaderFooterEnabled": False
 }
-options = webdriver.ChromeOptions()
 options.add_argument('--disable-gpu')
 options.add_argument('--disable-extensions')
 options.add_argument('--proxy-server="direct://"')
@@ -44,28 +62,34 @@ options.add_argument('--start-maximized')
 options.add_argument('--start-maximized')
 options.add_argument('--kiosk-printing')
 options.add_experimental_option("prefs",
-    {"printing.print_preview_sticky_settings.appState": json.dumps(appState),
-     "download.default_directory": '~/Downloads'}
-)
-
-pltfrm = platform.system()
-if pltfrm == 'Darwin':
-    options.add_argument('~/Library/Application Support/Google/Chrome')
-elif pltfrm == 'Linux':
-    options.add_argument('~/.config/google-chrome')
-else:
-    options.add_argument('--user-data-dir=C:\\Users\\' + os.environ['USERNAME'] +
-                         '\\AppData\\Local\\Google\\Chrome\\User Data')
+                                {"printing.print_preview_sticky_settings.appState": json.dumps(appState),
+                                 "download.default_directory": download_folder}
+                                )
 
 
 def save_pdf(driver, crntnode):
     crntnode.create_pdf = True
-    # driver.execute_script('window.print()')
-    # time.sleep(7)
+    driver.execute_script('return window.print()')
+    check_download_pdf(driver, crntnode)
 
 
-def rename_pdf():
-    pass
+def check_download_pdf(driver, crntnode):
+    timeout_second = 10
+    for i in range(timeout_second + 1):
+        dlfilenames = glob.glob(f'{download_folder}\\*.*')
+        for fname in dlfilenames:
+            if fname.find(crntnode.title) > -1:
+                filename, file_extension = os.path.splitext(fname)
+                if file_extension == '.pdf':
+                    rename_pdf(fname, crntnode)
+
+        time.sleep(1)
+
+
+def rename_pdf(fname, crntnode):
+    global file_name_index
+    file_name_index = file_name_index+1
+    os.rename(fname, download_folder + '\\pdf_downloader\\' + 'pdf_' + str(file_name_index).zfill(5) + '.pdf')
 
 
 def check_page(driver, crntnode, app_options):
@@ -87,7 +111,8 @@ def check_page(driver, crntnode, app_options):
 def start(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
     driver.get(crntnode.org_url)
-    WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located)
+    WebDriverWait(driver, 15).until(EC.presence_of_all_elements_located)
+    crntnode.set_title(driver.title)
     print('   ' * crnt_depth + crntnode.org_url)
     save_pdf(driver, crntnode)
 
@@ -134,6 +159,11 @@ def next_linknode(driver, linknodes, crnt_depth, app_options):
                 break
 
 
+def make_dir(dirpath):
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath, exist_ok=True)
+
+
 def init(top_url, app_options):
     chrome_servie = fs.Service(executable_path="chromedriver.exe")
     driver = webdriver.Chrome(service=chrome_servie, options=options)
@@ -147,6 +177,7 @@ def init(top_url, app_options):
         print('url error')
         return
 
+    make_dir(download_folder + '\\pdf_downloader')
     start(driver, linknodes, 1, app_options)
     driver.quit()
 

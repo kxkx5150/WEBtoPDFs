@@ -2,6 +2,7 @@ from urllib.parse import urlparse
 
 
 class LinkNode:
+    title = ""
     org_url = None
     dirname = None
     parse_url = None
@@ -24,4 +25,7 @@ class LinkNode:
 
     def set_current_linknodes(self, linknodes):
         self.current_linknodes = linknodes;
+
+    def set_title(self, title):
+        self.title = title
 
