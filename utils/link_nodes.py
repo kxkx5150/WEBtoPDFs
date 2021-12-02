@@ -1,9 +1,11 @@
-import os
 import requests
 import mimetypes
 
 
 class LinkNodes:
+    top_url = None
+    top_dir = None
+
     page_url = None
     prntnode = None
 
@@ -19,6 +21,9 @@ class LinkNodes:
     deny_exts = {}
 
     def __init__(self, page_url, prntnode, app_options):
+        self.top_url = app_options['top_url']
+        self.top_dir = app_options['top_dir']
+
         self.page_url = page_url
         self.prntnode = prntnode
 
@@ -42,17 +47,24 @@ class LinkNodes:
                     if lnknod.org_url == aurl:
                         self.append_node(lnknod)
         else:
-            if self.samedomain:
-                if lnknod.parse_url.netloc == self.prntnode.parse_url.netloc:
+            if not self.prntcheck:
+                if lnknod.dirname.find(self.top_dir) == 0:
                     self.append_node(lnknod)
             else:
-                self.append_node(lnknod)
+                if self.samedomain:
+                    if lnknod.parse_url.netloc == self.prntnode.parse_url.netloc:
+                        self.append_node(lnknod)
+                else:
+                    self.append_node(lnknod)
 
     def append_node(self, lnknod):
         if lnknod.org_url.find('mailto:') == 0:
             return
 
         response = requests.get(lnknod.org_url)
+        if response.status_code != 200:
+            return
+
         content_type = response.headers['content-type']
         extension = mimetypes.guess_extension(content_type)
         if extension and extension in self.deny_exts:
@@ -84,4 +96,3 @@ class LinkNodes:
     def inc_check_index(self):
         if self.check_index < self.link_count:
             self.check_index += 1
-

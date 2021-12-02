@@ -13,21 +13,14 @@ from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
 from utils import allow_urls, deny_urls, deny_exts
 
-options = webdriver.ChromeOptions()
-options.add_argument('--disable-gpu')
-options.add_argument('--disable-extensions')
-options.add_argument('--proxy-server="direct://"')
-options.add_argument('--proxy-bypass-list=*')
-options.add_argument('--start-maximized')
-options.add_argument('--start-maximized')
-pltfrm = platform.system()
-if pltfrm == 'Darwin':
-    options.add_argument('~/Library/Application Support/Google/Chrome')
-elif pltfrm == 'Linux':
-    options.add_argument('~/.config/google-chrome')
-else:
-    options.add_argument('--user-data-dir=C:\\Users\\' + os.environ['USERNAME'] +
-                         '\\AppData\\Local\\Google\\Chrome\\User Data')
+logger = getLogger(__name__)
+handler = StreamHandler()
+handler.setLevel(DEBUG)
+logger.setLevel(DEBUG)
+logger.addHandler(handler)
+logger.propagate = False
+root_node = None
+
 appState = {
     "recentDestinations": [
         {
@@ -39,21 +32,30 @@ appState = {
     "selectedDestinationId": "Save as PDF",
     "version": 2,
     "pageSize": 'A4',
-    "isCssBackgroundEnabled": True
+    "isCssBackgroundEnabled": True,
+    "isHeaderFooterEnabled": False
 }
-options.add_experimental_option("prefs", {
-    "printing.print_preview_sticky_settings.appState": json.dumps(appState),
-    "download.default_directory": '~/Downloads'
-})
+options = webdriver.ChromeOptions()
+options.add_argument('--disable-gpu')
+options.add_argument('--disable-extensions')
+options.add_argument('--proxy-server="direct://"')
+options.add_argument('--proxy-bypass-list=*')
+options.add_argument('--start-maximized')
+options.add_argument('--start-maximized')
 options.add_argument('--kiosk-printing')
+options.add_experimental_option("prefs",
+    {"printing.print_preview_sticky_settings.appState": json.dumps(appState),
+     "download.default_directory": '~/Downloads'}
+)
 
-logger = getLogger(__name__)
-handler = StreamHandler()
-handler.setLevel(DEBUG)
-logger.setLevel(DEBUG)
-logger.addHandler(handler)
-logger.propagate = False
-root_node = None
+pltfrm = platform.system()
+if pltfrm == 'Darwin':
+    options.add_argument('~/Library/Application Support/Google/Chrome')
+elif pltfrm == 'Linux':
+    options.add_argument('~/.config/google-chrome')
+else:
+    options.add_argument('--user-data-dir=C:\\Users\\' + os.environ['USERNAME'] +
+                         '\\AppData\\Local\\Google\\Chrome\\User Data')
 
 
 def save_pdf(driver, crntnode):
@@ -62,8 +64,11 @@ def save_pdf(driver, crntnode):
     # time.sleep(7)
 
 
+def rename_pdf():
+    pass
+
+
 def check_page(driver, crntnode, app_options):
-    driver.implicitly_wait(5)
     prntelem = driver.find_element(by=By.XPATH, value=app_options['xpath'])
     elems = prntelem.find_elements(By.XPATH, 'descendant::*[@href]')
     child_linknodes = LinkNodes(crntnode.org_url, crntnode, app_options)
@@ -82,8 +87,8 @@ def check_page(driver, crntnode, app_options):
 def start(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
     driver.get(crntnode.org_url)
-    wait = WebDriverWait(driver, 10)
-    wait.until(EC.presence_of_all_elements_located)
+    WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located)
+    print('   ' * crnt_depth + crntnode.org_url)
     save_pdf(driver, crntnode)
 
     if crnt_depth < app_options['depth']:
@@ -95,7 +100,7 @@ def start(driver, linknodes, crnt_depth, app_options):
             targetnode = crntnode.child_linknodes.get_current_node()
             if targetnode:
                 crnt_depth += 1
-                print(' ' * crnt_depth + 'down : ' + targetnode.org_url)
+                print('---down')
                 start(driver, crntnode.child_linknodes, crnt_depth, app_options)
             else:
                 next_linknode(driver, linknodes, crnt_depth, app_options)
@@ -110,14 +115,15 @@ def start(driver, linknodes, crnt_depth, app_options):
 def next_linknode(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
     if crntnode:
-        print(' ' * crnt_depth + 'next : ' + crntnode.org_url)
+        print('next')
         start(driver, linknodes, crnt_depth, app_options)
     else:
         lnknds = linknodes
         while True:
-            print('up')
+            print('---up')
             crnt_depth -= 1
             if crnt_depth < 2:
+                print('---root')
                 break
 
             prntnode = lnknds.prntnode
@@ -161,7 +167,7 @@ def main(args):
     else:
         samedomain = True
 
-    prntcheck = input('parent dirctory ? (y or n)Default y : ')
+    prntcheck = input('check parent dirctory ? (y or n)Default y : ')
     if prntcheck == 'n':
         prntcheck = False
     else:
@@ -178,6 +184,8 @@ def main(args):
         depth = 2
 
     app_options = {
+        'top_url': top_url.rsplit('#', 1)[0],
+        'top_dir': top_url.rsplit('/', 1)[0],
         'samedomain': samedomain,
         'prntcheck': prntcheck,
         'xpath': xpath,
