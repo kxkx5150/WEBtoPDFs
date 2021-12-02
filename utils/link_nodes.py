@@ -1,3 +1,6 @@
+import os
+
+
 class LinkNodes:
     page_url = None
     prntnode = None
@@ -24,6 +27,10 @@ class LinkNodes:
         self.link_nodes = []
 
     def check_append(self, lnknod):
+        ext = os.path.splitext(lnknod.org_url)
+
+
+
         if len(self.allow_urls) > 0:
             for aurl in self.allow_urls:
                 if aurl[-1] == '/':

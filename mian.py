@@ -1,5 +1,4 @@
 import sys
-import time
 import json
 import os.path
 import platform
@@ -10,10 +9,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from logging import getLogger, StreamHandler, DEBUG
-from link_node import LinkNode
-from link_nodes import LinkNodes
-import allow_urls
-import deny_urls
+from utils.link_node import LinkNode
+from utils.link_nodes import LinkNodes
+from utils import allow_urls, deny_urls
 
 options = webdriver.ChromeOptions()
 options.add_argument('--disable-gpu')
@@ -60,8 +58,8 @@ root_node = None
 
 def save_pdf(driver, crntnode):
     crntnode.create_pdf = True
-    driver.execute_script('window.print()')
-    time.sleep(7)
+    # driver.execute_script('window.print()')
+    # time.sleep(7)
 
 
 def check_page(driver, crntnode, app_options):
@@ -110,9 +108,6 @@ def start(driver, linknodes, crnt_depth, app_options):
     elif crnt_depth == app_options['depth']:
         next_linknode(driver, linknodes, crnt_depth, app_options)
 
-    else:
-        pass
-
 
 def next_linknode(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
@@ -122,6 +117,7 @@ def next_linknode(driver, linknodes, crnt_depth, app_options):
     else:
         lnknds = linknodes
         while True:
+            print('up')
             crnt_depth -= 1
             if crnt_depth < 2:
                 break
