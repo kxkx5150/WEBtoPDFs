@@ -14,7 +14,6 @@ from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
 from utils import allow_urls, deny_urls, deny_exts
-from urllib.parse import urlparse
 
 logger = getLogger(__name__)
 handler = StreamHandler()

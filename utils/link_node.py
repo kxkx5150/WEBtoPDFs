@@ -24,8 +24,7 @@ class LinkNode:
         self.child_linknodes = linknodes
 
     def set_current_linknodes(self, linknodes):
-        self.current_linknodes = linknodes;
+        self.current_linknodes = linknodes
 
     def set_title(self, title):
         self.title = title
-
