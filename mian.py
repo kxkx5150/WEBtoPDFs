@@ -14,6 +14,7 @@ from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
 from utils import allow_urls, deny_urls, deny_exts
+from urllib.parse import urlparse
 
 logger = getLogger(__name__)
 handler = StreamHandler()
@@ -70,10 +71,11 @@ def save_pdf(driver, crntnode, app_options):
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
     check_download_pdf(crntnode, app_options)
+    time.sleep(1)
 
 
 def check_download_pdf(crntnode, app_options):
-    timeout_second = 10
+    timeout_second = 7
     for i in range(timeout_second + 1):
         dlfilenames = glob.glob(f'{download_folder}\\*.*')
         for fname in dlfilenames:
@@ -81,8 +83,17 @@ def check_download_pdf(crntnode, app_options):
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
                     rename_pdf(fname, app_options)
+                    return
 
         time.sleep(1)
+
+    files = list(filter(os.path.isfile, glob.glob(f'{download_folder}\\*.*')))
+    files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    for f in files:
+        fn, fe = os.path.splitext(f)
+        if fe == '.pdf':
+            rename_pdf(f, app_options)
+            return
 
 
 def rename_pdf(fname, app_options):
@@ -93,7 +104,7 @@ def rename_pdf(fname, app_options):
 
 def check_page(driver, crntnode, app_options):
     prntelem = driver.find_element(by=By.XPATH, value=app_options['xpath'])
-    elems = prntelem.find_elements(By.XPATH, 'descendant::*[@href]')
+    elems = prntelem.find_elements(By.XPATH, 'descendant::a[@href]')
     child_linknodes = LinkNodes(crntnode.org_url, crntnode, app_options)
 
     if prntelem:

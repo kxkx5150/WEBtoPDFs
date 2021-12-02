@@ -58,7 +58,7 @@ class LinkNodes:
                     self.append_node(lnknod)
 
     def append_node(self, lnknod):
-        if lnknod.org_url.find('mailto:') == 0:
+        if lnknod.org_url.find(r'http:') != 0 and lnknod.org_url.find(r'https:') != 0:
             return
 
         response = requests.get(lnknod.org_url)
