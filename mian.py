@@ -14,7 +14,7 @@ from selenium.webdriver.support import expected_conditions
 from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
-from utils import allow_urls, deny_urls, deny_exts
+from utils import allow_urls, deny_urls, deny_exts, allow_exts
 
 logger = getLogger(__name__)
 handler = StreamHandler()
@@ -29,6 +29,7 @@ def init_selenium():
     global download_folder
     options = webdriver.ChromeOptions()
     pltfrm = platform.system()
+
     if pltfrm == 'Darwin':
         options.add_argument('~/Library/Application Support/Google/Chrome')
         download_folder = '~/Downloads'
@@ -80,6 +81,7 @@ def save_pdf(driver, crntnode, app_options):
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
     time.sleep(1)
+
     check_download_pdf(crntnode, app_options)
     if crntnode.dlimg_path:
         # create_screenshot(driver, crntnode.dlimg_path)
@@ -92,7 +94,7 @@ def check_download_pdf(crntnode, app_options):
     for i in range(timeout_second + 1):
         dlfilenames = glob.glob(f'{download_folder}{os.sep}*.*')
         for fname in dlfilenames:
-            if fname.find("dl_pdf_"+crntnode.filename) > -1:
+            if fname.find("dl_pdf_" + crntnode.filename) > -1:
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
                     rename_pdf(crntnode, filename + file_extension, app_options)
@@ -102,6 +104,7 @@ def check_download_pdf(crntnode, app_options):
 
     files = list(filter(os.path.isfile, glob.glob(f'{download_folder}{os.sep}*.*')))
     files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+
     for f in files:
         fn, fe = os.path.splitext(f)
         if fe == '.pdf':
@@ -112,11 +115,13 @@ def check_download_pdf(crntnode, app_options):
 def rename_pdf(crntnode, fname, app_options):
     app_options['filename_index'] += 1
     abs_src_path = fname
+
     if abs_src_path.find(r' '):
         if abs_src_path.find(r'\ '):
             abs_src_path.replace(r'\\ ', r'\ ')
         else:
             abs_src_path.replace(r' ', r'\ ')
+
     abs_dst_path = app_options['download_dir']
     abs_dst_path += f'{os.sep}pdf{os.sep}pdf_' + str(app_options['filename_index']).zfill(5) + r'.pdf'
 
@@ -151,6 +156,7 @@ def create_screenshot(driver, abs_img_dst_path):
 def check_page(driver, crntnode, app_options):
     if crntnode.link_check:
         return
+
     prntelem = driver.find_element(by=By.XPATH, value=app_options['xpath'])
     elems = prntelem.find_elements(By.XPATH, 'descendant::a[@href]')
     child_linknodes = LinkNodes(crntnode.org_url, crntnode, app_options)
@@ -168,14 +174,17 @@ def check_page(driver, crntnode, app_options):
 
 def start(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
+
     driver.get(crntnode.org_url)
     WebDriverWait(driver, 15).until(expected_conditions.presence_of_all_elements_located)
     crntnode.set_title(driver.title)
     print('   ' * crnt_depth + crntnode.org_url)
+
     save_pdf(driver, crntnode, app_options)
 
     if crnt_depth < app_options['depth']:
         check_page(driver, crntnode, app_options)
+
     linknodes.inc_check_index()
 
     if crnt_depth < app_options['depth']:
@@ -197,6 +206,7 @@ def start(driver, linknodes, crnt_depth, app_options):
 
 def next_linknode(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
+
     if crntnode:
         start(driver, linknodes, crnt_depth, app_options)
     else:
@@ -253,6 +263,7 @@ def init(top_url, app_options, options):
 
 def main(args):
     top_url = ''
+
     if len(args):
         top_url = args[0]
     if not top_url:
@@ -304,6 +315,7 @@ def main(args):
         'depth': depth,
         'allow_urls': allow_urls.urls,
         'deny_urls': deny_urls.urls,
+        'allow_exts': allow_exts.extensions,
         'deny_exts': deny_exts.extensions,
         'download_dir': download_folder,
         'filename_index': 0,

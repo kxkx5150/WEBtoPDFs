@@ -19,6 +19,7 @@ class LinkNodes:
     allow_urls = {}
     deny_urls = {}
     deny_exts = {}
+    allow_exts = {}
 
     def __init__(self, page_url, prntnode, app_options):
         self.top_url = app_options['top_url']
@@ -32,6 +33,8 @@ class LinkNodes:
 
         self.allow_urls = app_options['allow_urls']
         self.deny_urls = app_options['deny_urls']
+
+        self.allow_exts = app_options['allow_exts']
         self.deny_exts = app_options['deny_exts']
 
         self.link_nodes = []
