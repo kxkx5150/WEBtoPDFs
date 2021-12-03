@@ -221,10 +221,10 @@ def init(top_url, app_options, options):
     diridx = 0
     while True:
         diridx += 1
-        if not os.path.exists(download_folder + f'{os.sep}pdf_downloader' + str(diridx)):
+        if not os.path.exists('pdf_downloader' + str(diridx)):
             break
 
-    app_options['download_dir'] = download_folder + f'{os.sep}pdf_downloader' + str(diridx)
+    app_options['download_dir'] = 'pdf_downloader' + str(diridx)
     make_dir(app_options['download_dir'])
     make_dir(app_options['download_dir'] + f'{os.sep}pdf')
     make_dir(app_options['download_dir'] + f'{os.sep}screenshot')
