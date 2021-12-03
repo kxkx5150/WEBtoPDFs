@@ -1,8 +1,11 @@
+import os
 from urllib.parse import urlparse
 
 
 class LinkNode:
     title = ""
+    filename = ""
+
     org_url = None
     dirname = None
     parse_url = None
@@ -21,6 +24,7 @@ class LinkNode:
         self.org_url = page_url.rsplit('#', 1)[0]
         self.dirname = page_url.rsplit('/', 1)[0]
         self.parse_url = urlparse(page_url)
+        self.filename = os.path.basename(self.parse_url.path)
         self.prntnode = prntnode
 
     def append_link_nodes(self, linknodes):

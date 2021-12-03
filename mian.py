@@ -74,22 +74,25 @@ def init_selenium():
 def save_pdf(driver, crntnode, app_options):
     if crntnode.org_url in app_options['created_urls']:
         return
+
+    driver.execute_script(f'document.title = "dl_pdf_{crntnode.filename}"')
     app_options['created_urls'].append(crntnode.org_url)
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
-    check_download_pdf(crntnode, app_options)
     time.sleep(1)
+    check_download_pdf(crntnode, app_options)
     if crntnode.dlimg_path:
-        create_screenshot(driver, crntnode.dlimg_path)
+        # create_screenshot(driver, crntnode.dlimg_path)
+        pass
     time.sleep(1)
 
 
 def check_download_pdf(crntnode, app_options):
-    timeout_second = 7
+    timeout_second = 6
     for i in range(timeout_second + 1):
         dlfilenames = glob.glob(f'{download_folder}{os.sep}*.*')
         for fname in dlfilenames:
-            if fname.find(crntnode.title) > -1:
+            if fname.find("dl_pdf_"+crntnode.filename) > -1:
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
                     rename_pdf(crntnode, filename + file_extension, app_options)
@@ -123,7 +126,21 @@ def rename_pdf(crntnode, fname, app_options):
     crntnode.dlpdf_path = abs_dst_path
     crntnode.dlimg_path = abs_img_dst_path
 
-    shutil.move(abs_src_path, abs_dst_path)
+    try:
+        shutil.move(abs_src_path, abs_dst_path)
+    except Exception as ex:
+        print(0)
+        if abs_src_path.find(r' '):
+            print(1)
+            if abs_src_path.find(r'\ '):
+                print(2)
+            elif abs_src_path.find(r' '):
+                print(3)
+            else:
+                print(4)
+        pass
+        print(ex)
+
     time.sleep(1)
 
 
@@ -221,10 +238,10 @@ def init(top_url, app_options, options):
     diridx = 0
     while True:
         diridx += 1
-        if not os.path.exists('pdf_downloader' + str(diridx)):
+        if not os.path.exists(download_folder + f'{os.sep}pdf_downloader' + str(diridx)):
             break
 
-    app_options['download_dir'] = 'pdf_downloader' + str(diridx)
+    app_options['download_dir'] = download_folder + f'{os.sep}pdf_downloader' + str(diridx)
     make_dir(app_options['download_dir'])
     make_dir(app_options['download_dir'] + f'{os.sep}pdf')
     make_dir(app_options['download_dir'] + f'{os.sep}screenshot')
