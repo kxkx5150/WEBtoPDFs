@@ -1,4 +1,5 @@
 import glob
+import shutil
 import sys
 import json
 import os.path
@@ -21,46 +22,53 @@ handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
-
-options = webdriver.ChromeOptions()
-pltfrm = platform.system()
 download_folder = ''
-if pltfrm == 'Darwin':
-    options.add_argument('~/Library/Application Support/Google/Chrome')
-    download_folder = '~/Downloads'
-elif pltfrm == 'Linux':
-    options.add_argument('~/.config/google-chrome')
-    download_folder = '~/Downloads'
-else:
-    options.add_argument('--user-data-dir=C:\\Users\\' + os.environ['USERNAME'] +
-                         '\\AppData\\Local\\Google\\Chrome\\User Data')
-    download_folder = 'C:\\Users\\' + os.environ['USERNAME'] + '\\Downloads'
 
-appState = {
-    "recentDestinations": [
+
+def init_selenium():
+    global download_folder
+    options = webdriver.ChromeOptions()
+    pltfrm = platform.system()
+    if pltfrm == 'Darwin':
+        options.add_argument('~/Library/Application Support/Google/Chrome')
+        download_folder = '~/Downloads'
+    elif pltfrm == 'Linux':
+        options.add_argument('~/.config/google-chrome')
+        download_folder = '~/Downloads'
+    else:
+        options.add_argument(f'--user-data-dir=C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] +
+                             f'{os.sep}AppData{os.sep}Local{os.sep}Google{os.sep}Chrome{os.sep}User Data')
+        download_folder = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + '{os.sep}Downloads'
+
+    appstate = {
+        "recentDestinations": [
+            {
+                "id": "Save as PDF",
+                "origin": "local",
+                "account": ""
+            }
+        ],
+        "selectedDestinationId": "Save as PDF",
+        "version": 2,
+        "pageSize": 'A4',
+        "isCssBackgroundEnabled": True,
+        "isHeaderFooterEnabled": False
+    }
+    options.add_argument('--disable-gpu')
+    options.add_argument('--disable-extensions')
+    options.add_argument('--proxy-server="direct://"')
+    options.add_argument('--proxy-bypass-list=*')
+    options.add_argument('--start-maximized')
+    options.add_argument('--start-maximized')
+    options.add_argument('--kiosk-printing')
+    options.add_experimental_option(
+        "prefs",
         {
-            "id": "Save as PDF",
-            "origin": "local",
-            "account": ""
+            "printing.print_preview_sticky_settings.appState": json.dumps(appstate),
+            "download.default_directory": download_folder
         }
-    ],
-    "selectedDestinationId": "Save as PDF",
-    "version": 2,
-    "pageSize": 'A4',
-    "isCssBackgroundEnabled": True,
-    "isHeaderFooterEnabled": False
-}
-options.add_argument('--disable-gpu')
-options.add_argument('--disable-extensions')
-options.add_argument('--proxy-server="direct://"')
-options.add_argument('--proxy-bypass-list=*')
-options.add_argument('--start-maximized')
-options.add_argument('--start-maximized')
-options.add_argument('--kiosk-printing')
-options.add_experimental_option("prefs",
-                                {"printing.print_preview_sticky_settings.appState": json.dumps(appState),
-                                 "download.default_directory": download_folder}
-                                )
+    )
+    return options
 
 
 def save_pdf(driver, crntnode, app_options):
@@ -70,23 +78,22 @@ def save_pdf(driver, crntnode, app_options):
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
     check_download_pdf(crntnode, app_options)
-    time.sleep(1)
 
 
 def check_download_pdf(crntnode, app_options):
     timeout_second = 7
     for i in range(timeout_second + 1):
-        dlfilenames = glob.glob(f'{download_folder}\\*.*')
+        dlfilenames = glob.glob(f'{download_folder}{os.sep}*.*')
         for fname in dlfilenames:
             if fname.find(crntnode.title) > -1:
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
-                    rename_pdf(fname, app_options)
+                    rename_pdf(filename+file_extension, app_options)
                     return
 
         time.sleep(1)
 
-    files = list(filter(os.path.isfile, glob.glob(f'{download_folder}\\*.*')))
+    files = list(filter(os.path.isfile, glob.glob(f'{download_folder}{os.sep}*.*')))
     files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
     for f in files:
         fn, fe = os.path.splitext(f)
@@ -97,11 +104,21 @@ def check_download_pdf(crntnode, app_options):
 
 def rename_pdf(fname, app_options):
     app_options['filename_index'] += 1
-    os.rename(fname, app_options['download_dir'] + '\\' +
-              'pdf_' + str(app_options['filename_index']).zfill(5) + '.pdf')
+    abs_src_path = fname
+    if abs_src_path.find(r' '):
+        if abs_src_path.find(r'\ '):
+            abs_src_path.replace(r'\\ ', r'\ ')
+        else:
+            abs_src_path.replace(r' ', r'\ ')
+    abs_dst_path = app_options['download_dir']
+    abs_dst_path += f'{os.sep}pdf{os.sep}pdf_' + str(app_options['filename_index']).zfill(5) + r'.pdf'
+    shutil.move(abs_src_path, abs_dst_path)
+    time.sleep(1)
 
 
 def check_page(driver, crntnode, app_options):
+    if crntnode.link_check:
+        return
     prntelem = driver.find_element(by=By.XPATH, value=app_options['xpath'])
     elems = prntelem.find_elements(By.XPATH, 'descendant::a[@href]')
     child_linknodes = LinkNodes(crntnode.org_url, crntnode, app_options)
@@ -149,7 +166,6 @@ def start(driver, linknodes, crnt_depth, app_options):
 def next_linknode(driver, linknodes, crnt_depth, app_options):
     crntnode = linknodes.get_current_node()
     if crntnode:
-        print('next')
         start(driver, linknodes, crnt_depth, app_options)
     else:
         lnknds = linknodes
@@ -173,7 +189,7 @@ def make_dir(dirpath):
         os.makedirs(dirpath, exist_ok=True)
 
 
-def init(top_url, app_options):
+def init(top_url, app_options, options):
     chrome_servie = fs.Service(executable_path=ChromeDriverManager().install())
     driver = webdriver.Chrome(service=chrome_servie, options=options)
 
@@ -190,11 +206,15 @@ def init(top_url, app_options):
     diridx = 0
     while True:
         diridx += 1
-        if not os.path.exists(download_folder + '\\pdf_downloader' + str(diridx)):
+        if not os.path.exists(download_folder + f'{os.sep}pdf_downloader' + str(diridx)):
             break
 
-    app_options['download_dir'] = download_folder + '\\pdf_downloader' + str(diridx)
+    app_options['download_dir'] = download_folder + f'{os.sep}pdf_downloader' + str(diridx)
     make_dir(app_options['download_dir'])
+    make_dir(app_options['download_dir'] + f'{os.sep}pdf')
+    make_dir(app_options['download_dir'] + f'{os.sep}screenshot')
+
+    print('---root')
     start(driver, linknodes, 1, app_options)
     driver.quit()
 
@@ -208,6 +228,9 @@ def main(args):
     if not top_url:
         print('url error')
         return
+    if top_url[-1] == '?':
+        top_url = top_url[:-1]
+        top_url += '%3F'
 
     samedomain = input('same domain only ? (y or n)Default y : ')
     if samedomain == 'n':
@@ -231,6 +254,15 @@ def main(args):
     except ValueError:
         depth = 2
 
+    recus = input('recursionlimit ? Default 1000 : ')
+    try:
+        recus = int(recus)
+    except ValueError:
+        recus = 1000
+
+    sys.setrecursionlimit(recus)
+    print(sys.getrecursionlimit())
+
     app_options = {
         'top_url': top_url.rsplit('#', 1)[0],
         'top_dir': top_url.rsplit('/', 1)[0],
@@ -246,8 +278,8 @@ def main(args):
         'root_node': None,
         'created_urls': []
     }
-
-    init(top_url, app_options)
+    options = init_selenium()
+    init(top_url, app_options, options)
 
 
 if __name__ == '__main__':
