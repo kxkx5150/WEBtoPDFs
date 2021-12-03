@@ -1,5 +1,15 @@
 # WEBtoPDFs
- web pages to PDFs
+### Web pages to PDFs  
+ 
+<br><br><br>
+
+same domain only option  
+check parent dirctory option  
+links in target element (xpath) option  
+depth option  
+recursionlimit option  
+
+<br><br><br>
 
 WIP  
 
