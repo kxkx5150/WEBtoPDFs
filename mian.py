@@ -36,9 +36,9 @@ def init_selenium():
         options.add_argument('~/.config/google-chrome')
         download_folder = '~/Downloads'
     else:
-        options.add_argument(f'--user-data-dir=C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] +
+        options.add_argument('--user-data-dir=' + f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] +
                              f'{os.sep}AppData{os.sep}Local{os.sep}Google{os.sep}Chrome{os.sep}User Data')
-        download_folder = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + '{os.sep}Downloads'
+        download_folder = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + f'{os.sep}Downloads'
 
     appstate = {
         "recentDestinations": [
@@ -77,7 +77,9 @@ def save_pdf(driver, crntnode, app_options):
     app_options['created_urls'].append(crntnode.org_url)
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
-    check_download_pdf(crntnode, app_options)
+    abs_dst_path = check_download_pdf(crntnode, app_options)
+    # create_screenshot(driver, app_options, abs_dst_path)
+    time.sleep(1)
 
 
 def check_download_pdf(crntnode, app_options):
@@ -88,8 +90,7 @@ def check_download_pdf(crntnode, app_options):
             if fname.find(crntnode.title) > -1:
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
-                    rename_pdf(filename+file_extension, app_options)
-                    return
+                    return rename_pdf(filename + file_extension, app_options)
 
         time.sleep(1)
 
@@ -98,8 +99,7 @@ def check_download_pdf(crntnode, app_options):
     for f in files:
         fn, fe = os.path.splitext(f)
         if fe == '.pdf':
-            rename_pdf(f, app_options)
-            return
+            return rename_pdf(f, app_options)
 
 
 def rename_pdf(fname, app_options):
@@ -114,6 +114,12 @@ def rename_pdf(fname, app_options):
     abs_dst_path += f'{os.sep}pdf{os.sep}pdf_' + str(app_options['filename_index']).zfill(5) + r'.pdf'
     shutil.move(abs_src_path, abs_dst_path)
     time.sleep(1)
+    return abs_dst_path
+
+
+def create_screenshot(driver, app_options, abs_dst_path):
+    driver.set_window_size(1024, 768)
+    driver.save_screenshot('result.png')
 
 
 def check_page(driver, crntnode, app_options):
