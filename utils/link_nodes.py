@@ -68,10 +68,17 @@ class LinkNodes:
         if response.status_code != 200:
             return
 
-        content_type = response.headers['content-type']
+        content_type = response.headers['content-type'].split(";")[0]
         extension = mimetypes.guess_extension(content_type)
-        if extension and extension in self.deny_exts:
-            return
+
+        if self.allow_exts:
+            if extension not in self.allow_exts:
+                return
+            else:
+                pass
+        else:
+            if extension and extension in self.deny_exts:
+                return
 
         if len(self.deny_urls) > 0:
             for durl in self.deny_urls:
