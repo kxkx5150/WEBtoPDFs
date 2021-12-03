@@ -77,8 +77,10 @@ def save_pdf(driver, crntnode, app_options):
     app_options['created_urls'].append(crntnode.org_url)
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
-    abs_dst_path = check_download_pdf(crntnode, app_options)
-    # create_screenshot(driver, app_options, abs_dst_path)
+    check_download_pdf(crntnode, app_options)
+    time.sleep(1)
+    if crntnode.dlimg_path:
+        create_screenshot(driver, crntnode.dlimg_path)
     time.sleep(1)
 
 
@@ -90,7 +92,8 @@ def check_download_pdf(crntnode, app_options):
             if fname.find(crntnode.title) > -1:
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
-                    return rename_pdf(filename + file_extension, app_options)
+                    rename_pdf(crntnode, filename + file_extension, app_options)
+                    return
 
         time.sleep(1)
 
@@ -99,10 +102,11 @@ def check_download_pdf(crntnode, app_options):
     for f in files:
         fn, fe = os.path.splitext(f)
         if fe == '.pdf':
-            return rename_pdf(f, app_options)
+            rename_pdf(crntnode, fn + fe, app_options)
+            return
 
 
-def rename_pdf(fname, app_options):
+def rename_pdf(crntnode, fname, app_options):
     app_options['filename_index'] += 1
     abs_src_path = fname
     if abs_src_path.find(r' '):
@@ -112,14 +116,19 @@ def rename_pdf(fname, app_options):
             abs_src_path.replace(r' ', r'\ ')
     abs_dst_path = app_options['download_dir']
     abs_dst_path += f'{os.sep}pdf{os.sep}pdf_' + str(app_options['filename_index']).zfill(5) + r'.pdf'
+
+    abs_img_dst_path = app_options['download_dir']
+    abs_img_dst_path += f'{os.sep}screenshot{os.sep}pdf_' + str(app_options['filename_index']).zfill(5) + r'.png'
+
+    crntnode.dlpdf_path = abs_dst_path
+    crntnode.dlimg_path = abs_img_dst_path
+
     shutil.move(abs_src_path, abs_dst_path)
     time.sleep(1)
-    return abs_dst_path
 
 
-def create_screenshot(driver, app_options, abs_dst_path):
-    driver.set_window_size(1024, 768)
-    driver.save_screenshot('result.png')
+def create_screenshot(driver, abs_img_dst_path):
+    driver.save_screenshot(abs_img_dst_path)
 
 
 def check_page(driver, crntnode, app_options):
