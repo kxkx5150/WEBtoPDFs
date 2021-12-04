@@ -20,6 +20,8 @@ class LinkNode:
     dlpdf_path = None
     dlimg_path = None
 
+    error_retry = 0
+
     def __init__(self, page_url, prntnode):
         self.org_url = page_url.rsplit('#', 1)[0]
         self.dirname = page_url.rsplit('/', 1)[0]
