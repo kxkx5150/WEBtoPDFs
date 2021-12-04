@@ -1,4 +1,5 @@
 import glob
+import random
 import shutil
 import sys
 import json
@@ -82,12 +83,12 @@ def save_pdf(driver, crntnode, app_options):
     if crntnode.org_url in app_options['created_urls']:
         return
 
-    driver.execute_script(f'document.title = "dl_pdf_{crntnode.filename}"')
+    crntnode.tmp_title = "dl_pdf_" + app_options['random'] + '_' + crntnode.filename
+    driver.execute_script(f'document.title = "{crntnode.tmp_title}"')
     app_options['created_urls'].append(crntnode.org_url)
     crntnode.create_pdf = True
     driver.execute_script('return window.print()')
     time.sleep(1)
-
     check_download_pdf(crntnode, app_options)
 
 
@@ -97,7 +98,7 @@ def check_download_pdf(crntnode, app_options):
     for i in range(timeout_second + 1):
         dlfilenames = glob.glob(f'{dldir}{os.sep}*.*')
         for fname in dlfilenames:
-            if fname.find("dl_pdf_" + crntnode.filename) > -1:
+            if fname.find(crntnode.tmp_title) > -1:
                 filename, file_extension = os.path.splitext(fname)
                 if file_extension == '.pdf':
                     rename_pdf(crntnode, filename + file_extension, app_options)
@@ -134,6 +135,9 @@ def rename_pdf(crntnode, fname, app_options):
     crntnode.dlpdf_path = abs_dst_path
     crntnode.dlimg_path = abs_img_dst_path
 
+    if app_options['store_type'] == 'tree':
+        abs_dst_path = create_tree_node(crntnode, fname, app_options)
+
     try:
         shutil.move(abs_src_path, abs_dst_path)
     except Exception as ex:
@@ -150,6 +154,19 @@ def rename_pdf(crntnode, fname, app_options):
         print(ex)
 
     time.sleep(1)
+
+
+def create_tree_node(crntnode, fname, app_options):
+    urls = crntnode.parse_url.path.split('/')
+    urls[0] = crntnode.parse_url.netloc
+    if not urls[-1]:
+        urls[-1] = 'index.html'
+
+    path = os.path.join(*urls)
+    path = app_options['download_dir'] + f'{os.sep}pdf{os.sep}' + path + r'.pdf'
+    dirname = path.rsplit(os.sep, 1)[0]
+    make_dir(dirname)
+    return path
 
 
 def create_screenshot(driver, abs_img_dst_path):
@@ -306,19 +323,19 @@ def main(args):
         top_url = top_url[:-1]
         top_url += '%3F'
 
-    samedomain = input('same domain only ? (y or n)Default y : ')
+    samedomain = input('same domain only ? (y or n) Default y : ')
     if samedomain == 'n':
         samedomain = False
     else:
         samedomain = True
 
-    prntcheck = input('check parent dirctory ? (y or n)Default y : ')
+    prntcheck = input('check parent dirctory ? (y or n) Default y : ')
     if prntcheck == 'n':
         prntcheck = False
     else:
         prntcheck = True
 
-    xpath = input('links in target element ? (XPATH)Default /html/body : ')
+    xpath = input('links in target element ? (XPATH) Default /html/body : ')
     if not xpath:
         xpath = '/html/body'
 
@@ -328,7 +345,7 @@ def main(args):
     except ValueError:
         depth = 2
 
-    use_translate = input('Use google translate ? (y or n)Default n : ')
+    use_translate = input('Use google translate ? (y or n) Default n : ')
     if use_translate == 'y':
         use_translate = True
     else:
@@ -340,11 +357,15 @@ def main(args):
         translate_src = input('src language (en fr de ru ja zh etc..) ?')
         translate_dist = input('dist language (en fr de ru ja zh etc..) ?')
 
-    use_profile = input('Use chrome profile ? (y or n)Default n : ')
+    use_profile = input('Use chrome profile ? (y or n) Default n : ')
     if use_profile == 'y':
         use_profile = True
     else:
         use_profile = False
+
+    store_type = input('Store type ? (tree or sequential) Default tree : ')
+    if store_type != 'sequential':
+        store_type = 'tree'
 
     recus = input('recursionlimit ? Default 1000 : ')
     try:
@@ -379,7 +400,9 @@ def main(args):
         'use_translate': use_translate,
         'translate_src': translate_src,
         'translate_dist': translate_dist,
-        'use_screenshot': False
+        'use_screenshot': False,
+        'store_type': store_type,
+        'random': str(random.randint(1000, 9999))
     }
     options = init_selenium(app_options)
     init(top_url, app_options, options)

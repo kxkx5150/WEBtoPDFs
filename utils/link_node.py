@@ -22,6 +22,8 @@ class LinkNode:
 
     error_retry = 0
 
+    tmp_title = ""
+
     def __init__(self, page_url, prntnode):
         self.org_url = page_url.rsplit('#', 1)[0]
         self.dirname = page_url.rsplit('/', 1)[0]

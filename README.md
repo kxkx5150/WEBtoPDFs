@@ -7,7 +7,12 @@ same domain only option
 check parent dirctory option  
 links in target element (xpath) option  
 depth option  
+use chrome profile  
+use google translate  
+store_type option  
 recursionlimit option  
+
+
 
 <br><br><br>
 
