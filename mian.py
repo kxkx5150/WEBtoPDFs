@@ -12,7 +12,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome import service as fs
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions
 from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
@@ -185,9 +184,11 @@ def check_page(driver, crntnode, app_options):
     if prntelem:
         for elem in elems:
             href = elem.get_attribute("href")
-            lnknod = LinkNode(href, crntnode)
-            child_linknodes.check_append(lnknod)
-            lnknod.set_current_linknodes(child_linknodes)
+            if href:
+                lnknod = LinkNode(href, crntnode)
+                child_linknodes.check_append(lnknod)
+                lnknod.set_current_linknodes(child_linknodes)
+                print('check:', href)
 
     crntnode.link_check = True
     crntnode.append_link_nodes(child_linknodes)
@@ -199,32 +200,39 @@ def start(driver, linknodes, crnt_depth, app_options):
 
     try:
         driver.get(crntnode.org_url)
+        WebDriverWait(driver, timeout=20).until(
+            lambda driver: driver.execute_script('return document.readyState === "complete"')
+        )
+        print(driver.execute_script('return document.readyState'))
+        print('   ' * crnt_depth + 'get   : ' + crntnode.org_url)
+
     except TimeoutException as ex:
-        if crntnode.error_retry < 1:
+        if crntnode.error_retry < 2:
             crntnode.error_retry += 1
+            print('TimeoutException sleep 10')
             time.sleep(10)
             driver.get(crntnode.org_url)
         else:
             errorflg = True
 
     if not errorflg:
-        WebDriverWait(driver, 15).until(expected_conditions.presence_of_all_elements_located)
-        crntnode.set_title(driver.title)
-        print('   ' * crnt_depth + crntnode.org_url)
-
         if app_options['use_translate']:
-            time.sleep(5)
+            time.sleep(7)
         else:
             time.sleep(1)
 
+        crntnode.set_title(driver.title)
+        print('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url)
         save_pdf(driver, crntnode, app_options)
 
         if crntnode.dlimg_path and app_options['use_screenshot']:
             create_screenshot(driver, crntnode.dlimg_path)
 
         if crnt_depth < app_options['depth']:
+            print('   ' * crnt_depth + 'check : ' + crntnode.org_url)
             check_page(driver, crntnode, app_options)
 
+    print('')
     linknodes.inc_check_index()
 
     if crnt_depth < app_options['depth']:
@@ -291,7 +299,6 @@ def make_main_dir(app_options):
 def init(top_url, app_options, options):
     chrome_servie = fs.Service(executable_path=ChromeDriverManager().install())
     driver = webdriver.Chrome(service=chrome_servie, options=options)
-
     lnode = LinkNode(top_url, None)
     linknodes = LinkNodes(top_url, None, app_options)
     linknodes.append_node(lnode)

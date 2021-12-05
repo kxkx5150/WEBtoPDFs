@@ -1,6 +1,3 @@
-import requests
-import mimetypes
-
 
 class LinkNodes:
     top_url = None
@@ -64,20 +61,13 @@ class LinkNodes:
         if lnknod.org_url.find(r'http:') != 0 and lnknod.org_url.find(r'https:') != 0:
             return
 
-        response = requests.get(lnknod.org_url)
-        if response.status_code != 200:
-            return
-
-        content_type = response.headers['content-type'].split(";")[0]
-        extension = mimetypes.guess_extension(content_type)
-
-        if self.allow_exts:
-            if extension not in self.allow_exts:
+        if len(self.allow_exts) > 0:
+            if lnknod.extension not in self.allow_exts:
                 return
             else:
                 pass
         else:
-            if extension and extension in self.deny_exts:
+            if lnknod.extension and lnknod.extension in self.deny_exts:
                 return
 
         if len(self.deny_urls) > 0:

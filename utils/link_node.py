@@ -1,10 +1,12 @@
 import os
+from os.path import splitext
 from urllib.parse import urlparse
 
 
 class LinkNode:
     title = ""
     filename = ""
+    extension = '.html'
 
     org_url = None
     dirname = None
@@ -25,10 +27,19 @@ class LinkNode:
     tmp_title = ""
 
     def __init__(self, page_url, prntnode):
+        self.parse_url = urlparse(page_url)
+        if not self.parse_url.path:
+            page_url += '/'
+            self.parse_url = urlparse(page_url)
+
+        self.filename = os.path.basename(self.parse_url.path)
         self.org_url = page_url.rsplit('#', 1)[0]
         self.dirname = page_url.rsplit('/', 1)[0]
-        self.parse_url = urlparse(page_url)
-        self.filename = os.path.basename(self.parse_url.path)
+
+        filename, extension = splitext(self.filename)
+        if extension:
+            self.extension = extension
+
         self.prntnode = prntnode
 
     def append_link_nodes(self, linknodes):
