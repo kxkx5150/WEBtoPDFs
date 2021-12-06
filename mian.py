@@ -4,6 +4,7 @@ import sys
 import json
 import os.path
 import platform
+import threading
 import time
 import random
 import PySimpleGUI as sg
@@ -181,6 +182,7 @@ def check_page(driver, crntnode, app_options):
                 lnknod = LinkNode(href, crntnode)
                 child_linknodes.check_append(lnknod)
                 lnknod.set_current_linknodes(child_linknodes)
+                app_options['log']('check:', href, text_color='gray')
                 print('check:', href)
 
     crntnode.link_check = True
@@ -196,12 +198,17 @@ def start(driver, linknodes, crnt_depth, app_options):
         WebDriverWait(driver, timeout=20).until(
             lambda driver: driver.execute_script('return document.readyState === "complete"')
         )
-        print(driver.execute_script('return document.readyState'))
+        rstat = driver.execute_script('return document.readyState')
+        app_options['log'](rstat)
+        app_options['log']('   ' * crnt_depth + 'get   : ' + crntnode.org_url, text_color='blue')
+
+        print(rstat)
         print('   ' * crnt_depth + 'get   : ' + crntnode.org_url)
 
     except TimeoutException as ex:
         if crntnode.error_retry < 2:
             crntnode.error_retry += 1
+            app_options['log']('TimeoutException sleep 10', text_color='white', background_color='red')
             print('TimeoutException sleep 10')
             time.sleep(10)
             driver.get(crntnode.org_url)
@@ -215,6 +222,8 @@ def start(driver, linknodes, crnt_depth, app_options):
             time.sleep(1)
 
         crntnode.set_title(driver.title)
+        app_options['log']('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url, text_color='blue')
+
         print('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url)
         save_pdf(driver, crntnode, app_options)
 
@@ -222,9 +231,12 @@ def start(driver, linknodes, crnt_depth, app_options):
             create_screenshot(driver, crntnode.dlimg_path)
 
         if crnt_depth < app_options['depth']:
+            app_options['log']('   ' * crnt_depth + 'check : ' + crntnode.org_url, text_color='blue')
+
             print('   ' * crnt_depth + 'check : ' + crntnode.org_url)
             check_page(driver, crntnode, app_options)
 
+    app_options['log']('')
     print('')
     linknodes.inc_check_index()
 
@@ -233,6 +245,7 @@ def start(driver, linknodes, crnt_depth, app_options):
             targetnode = crntnode.child_linknodes.get_current_node()
             if targetnode:
                 crnt_depth += 1
+                app_options['log']('---down', text_color='deep pink')
                 print('---down')
                 start(driver, crntnode.child_linknodes, crnt_depth, app_options)
             else:
@@ -253,9 +266,11 @@ def next_linknode(driver, linknodes, crnt_depth, app_options):
     else:
         lnknds = linknodes
         while True:
+            app_options['log']('---up', text_color='deep pink')
             print('---up')
             crnt_depth -= 1
             if crnt_depth < 2:
+                app_options['log']('---root')
                 print('---root')
                 break
 
@@ -289,7 +304,7 @@ def make_main_dir(app_options):
     make_dir(app_options['pic_dir'])
 
 
-def init(app_options, options):
+def init(app_options, options, window):
     chrome_servie = fs.Service(executable_path=ChromeDriverManager().install())
     driver = webdriver.Chrome(service=chrome_servie, options=options)
     lnode = LinkNode(app_options['top_url'], None)
@@ -303,24 +318,21 @@ def init(app_options, options):
         return
 
     make_main_dir(app_options)
+    app_options['log']("---root", text_color='blue')
 
     print('---root')
     start(driver, linknodes, 1, app_options)
     driver.quit()
 
 
-def create_another_process(app_options):
+def create_another_process(app_options, window):
     options = init_selenium(app_options)
-    pid = os.getpid()
-    print('process1:' + str(pid))
-    p = Process(target=init, args=(app_options, options))
-    p.start()
+    threading.Thread(target=init, args=(app_options, options, window,), daemon=True).start()
 
 
 def start_log_tab(window, app_options):
     window['Log'].select()
-    app_options['log'] = window['Output'].print
-    app_options['log']("Program Start ...", text_color='white', background_color='blue')
+    app_options['log']("Program Start ...")
     pass
 
 
@@ -378,13 +390,13 @@ def click_start_button(window, values):
         'use_screenshot': False,
         'store_type': values['store_combo'],
         'random': str(random.randint(1000, 9999)),
-        'log': None
+        'log': window['Output'].print
     }
     sys.setrecursionlimit(int(values['recursion_spin']))
     print('recursionlimit : ', sys.getrecursionlimit())
     window['start_button'].update(disabled=True)
-    # create_another_process(app_options)
     start_log_tab(window, app_options)
+    create_another_process(app_options, window)
 
 
 def create_window():
