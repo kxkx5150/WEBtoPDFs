@@ -19,6 +19,7 @@ from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
 from utils import allow_urls, deny_urls, deny_exts, allow_exts
+from utils.country import cconde
 
 logger = getLogger(__name__)
 handler = StreamHandler()
@@ -434,9 +435,9 @@ def create_window():
         [sg.T('', font='any 1')],
         [sg.Frame('Translate', [
             [sg.Checkbox('Google translate', default=False, key='gtranslate_checkbox')],
-            [sg.Text('Src '), sg.Combo(['en', 'fr', 'de', 'ru', 'ja', 'zh'], default_value='en', key='tsrc_combo')],
+            [sg.Text('Src '), sg.Combo(cconde, default_value='en', key='tsrc_combo')],
             [sg.Text('Dist'),
-             sg.Combo(['en', 'fr', 'de', 'ru', 'ja', 'zh'], default_value='ja', key='tdist_combo')],
+             sg.Combo(cconde, default_value='ja', key='tdist_combo')],
         ])],
         [sg.Spin([i for i in range(1000, 1000000)],
                  initial_value=1000, key='recursion_spin'), sg.Text('Recursion limit')],
