@@ -1,15 +1,14 @@
-import glob
-import shutil
 import sys
 import json
+import time
+import glob
+import random
+import shutil
 import os.path
 import platform
 import threading
-import time
-import random
 import PySimpleGUI as sg
 from urllib.parse import urlparse
-from multiprocessing import Process
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
@@ -27,6 +26,7 @@ handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
+stop_thread = False
 
 
 def init_selenium(app_options):
@@ -190,6 +190,12 @@ def check_page(driver, crntnode, app_options):
 
 
 def start(driver, linknodes, crnt_depth, app_options):
+    if stop_thread:
+        app_options['window']['Log'].select()
+        app_options['log']("stop thread", text_color='white', background_color='red')
+        print("stop thread")
+        return
+
     crntnode = linknodes.get_current_node()
     errorflg = False
 
@@ -352,6 +358,9 @@ def loop_check_msg(window):
                 continue
             click_start_button(window, values)
 
+        elif event == 'stop_button':
+            click_stop_button()
+
     if closeflg:
         window.close()
 
@@ -390,13 +399,22 @@ def click_start_button(window, values):
         'use_screenshot': False,
         'store_type': values['store_combo'],
         'random': str(random.randint(1000, 9999)),
-        'log': window['Output'].print
+        'log': window['Output'].print,
+        'window': window
     }
     sys.setrecursionlimit(int(values['recursion_spin']))
     print('recursionlimit : ', sys.getrecursionlimit())
+
+    global stop_thread
+    stop_thread = False
     window['start_button'].update(disabled=True)
     start_log_tab(window, app_options)
     create_another_process(app_options, window)
+
+
+def click_stop_button():
+    global stop_thread
+    stop_thread = True
 
 
 def create_window():
@@ -423,7 +441,7 @@ def create_window():
         [sg.Spin([i for i in range(1000, 1000000)],
                  initial_value=1000, key='recursion_spin'), sg.Text('Recursion limit')],
         [sg.T('', font='any 1')],
-        [sg.Button('Start', size=(24, 2), key='start_button')]
+        [sg.Button('Start', size=(24, 2), key='start_button'),sg.Button('Stop', size=(24, 2), key='stop_button')]
     ])
     t2 = sg.Tab('Log', [
         [sg.Multiline(size=(100, 30), font=('Consolas', 10), key='Output')],
