@@ -5,6 +5,10 @@ import json
 import os.path
 import platform
 import time
+import random
+import PySimpleGUI as sg
+from urllib.parse import urlparse
+from multiprocessing import Process
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
@@ -14,9 +18,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
-from urllib.parse import urlparse
-import PySimpleGUI as sg
-import random
 from utils import allow_urls, deny_urls, deny_exts, allow_exts
 
 logger = getLogger(__name__)
@@ -298,11 +299,11 @@ def make_main_dir(app_options):
     make_dir(app_options['pic_dir'])
 
 
-def init(top_url, app_options, options):
+def init(app_options, options):
     chrome_servie = fs.Service(executable_path=ChromeDriverManager().install())
     driver = webdriver.Chrome(service=chrome_servie, options=options)
-    lnode = LinkNode(top_url, None)
-    linknodes = LinkNodes(top_url, None, app_options)
+    lnode = LinkNode(app_options['top_url'], None)
+    linknodes = LinkNodes(app_options['top_url'], None, app_options)
     linknodes.append_node(lnode)
     lnode.set_current_linknodes(linknodes)
     app_options['root_node'] = lnode
@@ -318,13 +319,12 @@ def init(top_url, app_options, options):
     driver.quit()
 
 
-def main(args):
-    for root, dirs, files in os.walk("screenshot"):
-        for file in files:
-            os.remove(os.path.join(root, file))
-
-    window = create_window()
-    loop_check_msg(window)
+def create_another_process(app_options):
+    options = init_selenium(app_options)
+    pid = os.getpid()
+    print('process1:' + str(pid))
+    p = Process(target=init, args=(app_options, options))
+    p.start()
 
 
 def loop_check_msg(window):
@@ -340,7 +340,7 @@ def loop_check_msg(window):
             top_url = values['URL_input']
             if not top_url:
                 print('url error')
-                return
+                continue
             if top_url[-1] == '?':
                 top_url = top_url[:-1]
                 top_url += '%3F'
@@ -376,9 +376,8 @@ def loop_check_msg(window):
             }
             sys.setrecursionlimit(int(values['recursion_spin']))
             print('recursionlimit : ', sys.getrecursionlimit())
-
-            options = init_selenium(app_options)
-            init(app_options['top_url'], app_options, options)
+            window['start_button'].update(disabled=True)
+            create_another_process(app_options)
 
     if closeflg:
         window.close()
@@ -397,7 +396,7 @@ def create_window():
         [sg.T('', font='any 1')],
         [sg.Text('Depth'), sg.Combo(['1', '2', '3', '4', '5', '6', '7', '8', '9'],
                                     default_value='2', key='depth_combo')],
-        [sg.Text('Store'), sg.Combo(['Tree', 'Sequential'], default_value='Tree', key='store_combo')],
+        [sg.Text('Store'), sg.Combo(['tree', 'sequential'], default_value='Tree', key='store_combo')],
         [sg.T('', font='any 1')],
         [sg.Frame('Translate', [
             [sg.Checkbox('Google translate', default=False, key='gtranslate_checkbox')],
@@ -411,7 +410,8 @@ def create_window():
         [sg.Button('Start', size=(24, 2), key='start_button')]
     ])
     t2 = sg.Tab('Log', [
-        [sg.Text('tab2')]
+        [sg.Text('tab2')],
+        [sg.Multiline(key='Output')],
     ])
     t3 = sg.Tab('Tab3', [
         [sg.Text('tab3')]
@@ -421,6 +421,15 @@ def create_window():
         [sg.TabGroup([[t1, t2, t3]])]
     ]
     return sg.Window(title, layout)
+
+
+def main(args):
+    for root, dirs, files in os.walk("screenshot"):
+        for file in files:
+            os.remove(os.path.join(root, file))
+
+    window = create_window()
+    loop_check_msg(window)
 
 
 if __name__ == '__main__':
