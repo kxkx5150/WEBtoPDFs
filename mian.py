@@ -430,7 +430,7 @@ def create_window():
         [sg.T('', font='any 1')],
         [sg.Text('Depth'), sg.Combo(['1', '2', '3', '4', '5', '6', '7', '8', '9'],
                                     default_value='2', key='depth_combo')],
-        [sg.Text('Store'), sg.Combo(['tree', 'sequential'], default_value='Tree', key='store_combo')],
+        [sg.Text('Store'), sg.Combo(['tree', 'sequential'], default_value='tree', key='store_combo')],
         [sg.T('', font='any 1')],
         [sg.Frame('Translate', [
             [sg.Checkbox('Google translate', default=False, key='gtranslate_checkbox')],
