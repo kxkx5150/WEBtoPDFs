@@ -143,17 +143,7 @@ def rename_pdf(crntnode, fname, app_options):
     try:
         shutil.move(abs_src_path, abs_dst_path)
     except Exception as ex:
-        print(0)
-        if abs_src_path.find(r' '):
-            print(1)
-            if abs_src_path.find(r'\ '):
-                print(2)
-            elif abs_src_path.find(r' '):
-                print(3)
-            else:
-                print(4)
         pass
-        print(ex)
 
     time.sleep(1)
 
@@ -327,6 +317,13 @@ def create_another_process(app_options):
     p.start()
 
 
+def start_log_tab(window, app_options):
+    window['Log'].select()
+    app_options['log'] = window['Output'].print
+    app_options['log']("Program Start ...", text_color='white', background_color='blue')
+    pass
+
+
 def loop_check_msg(window):
     while True:
         closeflg = False
@@ -341,46 +338,53 @@ def loop_check_msg(window):
             if not top_url:
                 print('url error')
                 continue
-            if top_url[-1] == '?':
-                top_url = top_url[:-1]
-                top_url += '%3F'
-
-            parse_url = urlparse(top_url)
-            if not parse_url.path:
-                top_url += '/'
-
-            app_options = {
-                'top_url': top_url.rsplit('#', 1)[0],
-                'top_dir': top_url.rsplit('/', 1)[0],
-                'samedomain': values['samedomain_checkbox'],
-                'prntcheck': values['parent_checkbox'],
-                'xpath': values['Xpath_input'],
-                'depth': int(values['depth_combo']),
-                'allow_urls': allow_urls.urls,
-                'deny_urls': deny_urls.urls,
-                'allow_exts': allow_exts.extensions,
-                'deny_exts': deny_exts.extensions,
-                'download_dir': '',
-                'os_downloads_path': '',
-                'pic_dir': '',
-                'filename_index': 0,
-                'root_node': None,
-                'created_urls': [],
-                'use_profile': values['profile_checkbox'],
-                'use_translate': values['gtranslate_checkbox'],
-                'translate_src': values['tsrc_combo'],
-                'translate_dist': values['tdist_combo'],
-                'use_screenshot': False,
-                'store_type': values['store_combo'],
-                'random': str(random.randint(1000, 9999))
-            }
-            sys.setrecursionlimit(int(values['recursion_spin']))
-            print('recursionlimit : ', sys.getrecursionlimit())
-            window['start_button'].update(disabled=True)
-            create_another_process(app_options)
+            click_start_button(window, values)
 
     if closeflg:
         window.close()
+
+
+def click_start_button(window, values):
+    top_url = values['URL_input']
+    if top_url[-1] == '?':
+        top_url = top_url[:-1]
+        top_url += '%3F'
+
+    parse_url = urlparse(top_url)
+    if not parse_url.path:
+        top_url += '/'
+
+    app_options = {
+        'top_url': top_url.rsplit('#', 1)[0],
+        'top_dir': top_url.rsplit('/', 1)[0],
+        'samedomain': values['samedomain_checkbox'],
+        'prntcheck': values['parent_checkbox'],
+        'xpath': values['Xpath_input'],
+        'depth': int(values['depth_combo']),
+        'allow_urls': allow_urls.urls,
+        'deny_urls': deny_urls.urls,
+        'allow_exts': allow_exts.extensions,
+        'deny_exts': deny_exts.extensions,
+        'download_dir': '',
+        'os_downloads_path': '',
+        'pic_dir': '',
+        'filename_index': 0,
+        'root_node': None,
+        'created_urls': [],
+        'use_profile': values['profile_checkbox'],
+        'use_translate': values['gtranslate_checkbox'],
+        'translate_src': values['tsrc_combo'],
+        'translate_dist': values['tdist_combo'],
+        'use_screenshot': False,
+        'store_type': values['store_combo'],
+        'random': str(random.randint(1000, 9999)),
+        'log': None
+    }
+    sys.setrecursionlimit(int(values['recursion_spin']))
+    print('recursionlimit : ', sys.getrecursionlimit())
+    window['start_button'].update(disabled=True)
+    # create_another_process(app_options)
+    start_log_tab(window, app_options)
 
 
 def create_window():
@@ -410,15 +414,14 @@ def create_window():
         [sg.Button('Start', size=(24, 2), key='start_button')]
     ])
     t2 = sg.Tab('Log', [
-        [sg.Text('tab2')],
-        [sg.Multiline(key='Output')],
+        [sg.Multiline(size=(100, 30), font=('Consolas', 10), key='Output')],
     ])
-    t3 = sg.Tab('Tab3', [
-        [sg.Text('tab3')]
-    ])
+    # t3 = sg.Tab('Tab3', [
+    #     [sg.Text('tab3')]
+    # ])
 
     layout = [
-        [sg.TabGroup([[t1, t2, t3]])]
+        [sg.TabGroup([[t1, t2]])]
     ]
     return sg.Window(title, layout)
 
