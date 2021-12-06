@@ -1,7 +1,7 @@
 # WEBtoPDFs
 ### Web pages to PDFs  
  
-<br><br><br>
+<br><br>
 
 same domain only option  
 check parent dirctory option  
@@ -12,15 +12,9 @@ use google translate
 store_type option  
 recursionlimit option  
 
-
-
 <br><br><br>
 
-WIP  
-
-https://user-images.githubusercontent.com/10168979/144494372-4fcea724-5a5b-4d18-8c8f-87fe5b7d3c4d.mp4
-
-
+https://user-images.githubusercontent.com/10168979/144926404-d079079b-b4ed-437a-81df-d2de27e7a48c.mp4
 
 store_type tree  
 ![t](https://user-images.githubusercontent.com/10168979/144721604-96ee0c48-ce4f-49ff-9a26-9f879a791796.PNG)
