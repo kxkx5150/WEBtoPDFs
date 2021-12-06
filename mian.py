@@ -1,5 +1,4 @@
 import glob
-import random
 import shutil
 import sys
 import json
@@ -15,6 +14,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
+from urllib.parse import urlparse
+import PySimpleGUI as sg
+import random
 from utils import allow_urls, deny_urls, deny_exts, allow_exts
 
 logger = getLogger(__name__)
@@ -317,102 +319,108 @@ def init(top_url, app_options, options):
 
 
 def main(args):
-    top_url = ''
-
-    if len(args):
-        top_url = args[0]
-    if not top_url:
-        top_url = input('URL : ')
-    if not top_url:
-        print('url error')
-        return
-    if top_url[-1] == '?':
-        top_url = top_url[:-1]
-        top_url += '%3F'
-
-    samedomain = input('same domain only ? (y or n) Default y : ')
-    if samedomain == 'n':
-        samedomain = False
-    else:
-        samedomain = True
-
-    prntcheck = input('check parent dirctory ? (y or n) Default y : ')
-    if prntcheck == 'n':
-        prntcheck = False
-    else:
-        prntcheck = True
-
-    xpath = input('links in target element ? (XPATH) Default /html/body : ')
-    if not xpath:
-        xpath = '/html/body'
-
-    depth = input('Depth ? Default 2 : ')
-    try:
-        depth = int(depth)
-    except ValueError:
-        depth = 2
-
-    use_translate = input('Use google translate ? (y or n) Default n : ')
-    if use_translate == 'y':
-        use_translate = True
-    else:
-        use_translate = False
-
-    translate_src = ''
-    translate_dist = ''
-    if use_translate:
-        translate_src = input('src language (en fr de ru ja zh etc..) ?')
-        translate_dist = input('dist language (en fr de ru ja zh etc..) ?')
-
-    use_profile = input('Use chrome profile ? (y or n) Default n : ')
-    if use_profile == 'y':
-        use_profile = True
-    else:
-        use_profile = False
-
-    store_type = input('Store type ? (tree or sequential) Default tree : ')
-    if store_type != 'sequential':
-        store_type = 'tree'
-
-    recus = input('recursionlimit ? Default 1000 : ')
-    try:
-        recus = int(recus)
-    except ValueError:
-        recus = 1000
-    sys.setrecursionlimit(recus)
-    print('recursionlimit : ', sys.getrecursionlimit())
-
     for root, dirs, files in os.walk("screenshot"):
         for file in files:
             os.remove(os.path.join(root, file))
 
-    app_options = {
-        'top_url': top_url.rsplit('#', 1)[0],
-        'top_dir': top_url.rsplit('/', 1)[0],
-        'samedomain': samedomain,
-        'prntcheck': prntcheck,
-        'xpath': xpath,
-        'depth': depth,
-        'allow_urls': allow_urls.urls,
-        'deny_urls': deny_urls.urls,
-        'allow_exts': allow_exts.extensions,
-        'deny_exts': deny_exts.extensions,
-        'download_dir': '',
-        'os_downloads_path': '',
-        'pic_dir': '',
-        'filename_index': 0,
-        'root_node': None,
-        'created_urls': [],
-        'use_profile': use_profile,
-        'use_translate': use_translate,
-        'translate_src': translate_src,
-        'translate_dist': translate_dist,
-        'use_screenshot': False,
-        'store_type': store_type,
-        'random': str(random.randint(1000, 9999))
-    }
-    options = init_selenium(app_options)
-    init(top_url, app_options, options)
+    window = create_window()
+    loop_check_msg(window)
+
+
+def loop_check_msg(window):
+    while True:
+        closeflg = False
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == 'Quit':
+            closeflg = True
+            break
+
+        elif event == 'start_button':
+            top_url = values['URL_input']
+            if not top_url:
+                print('url error')
+                return
+            if top_url[-1] == '?':
+                top_url = top_url[:-1]
+                top_url += '%3F'
+
+            parse_url = urlparse(top_url)
+            if not parse_url.path:
+                top_url += '/'
+
+            app_options = {
+                'top_url': top_url.rsplit('#', 1)[0],
+                'top_dir': top_url.rsplit('/', 1)[0],
+                'samedomain': values['samedomain_checkbox'],
+                'prntcheck': values['parent_checkbox'],
+                'xpath': values['Xpath_input'],
+                'depth': int(values['depth_combo']),
+                'allow_urls': allow_urls.urls,
+                'deny_urls': deny_urls.urls,
+                'allow_exts': allow_exts.extensions,
+                'deny_exts': deny_exts.extensions,
+                'download_dir': '',
+                'os_downloads_path': '',
+                'pic_dir': '',
+                'filename_index': 0,
+                'root_node': None,
+                'created_urls': [],
+                'use_profile': values['profile_checkbox'],
+                'use_translate': values['gtranslate_checkbox'],
+                'translate_src': values['tsrc_combo'],
+                'translate_dist': values['tdist_combo'],
+                'use_screenshot': False,
+                'store_type': values['store_combo'],
+                'random': str(random.randint(1000, 9999))
+            }
+            sys.setrecursionlimit(int(values['recursion_spin']))
+            print('recursionlimit : ', sys.getrecursionlimit())
+
+            options = init_selenium(app_options)
+            init(app_options['top_url'], app_options, options)
+
+    if closeflg:
+        window.close()
+
+
+def create_window():
+    title = "Web to PDF"
+    sg.theme('Default1')
+    t1 = sg.Tab('Options', [
+        [sg.Text('URL  '), sg.Input(key='URL_input')],
+        [sg.Text('XPath'), sg.Input(default_text='/html/body', key='Xpath_input')],
+        [sg.T('', font='any 1')],
+        [sg.Checkbox('Same domain only', default=True, key='samedomain_checkbox')],
+        [sg.Checkbox('Check parent dirctory', default=True, key='parent_checkbox')],
+        [sg.Checkbox('Use chrome profile', default=False, key='profile_checkbox')],
+        [sg.T('', font='any 1')],
+        [sg.Text('Depth'), sg.Combo(['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                                    default_value='2', key='depth_combo')],
+        [sg.Text('Store'), sg.Combo(['Tree', 'Sequential'], default_value='Tree', key='store_combo')],
+        [sg.T('', font='any 1')],
+        [sg.Frame('Translate', [
+            [sg.Checkbox('Google translate', default=False, key='gtranslate_checkbox')],
+            [sg.Text('Src '), sg.Combo(['en', 'fr', 'de', 'ru', 'ja', 'zh'], default_value='en', key='tsrc_combo')],
+            [sg.Text('Dist'),
+             sg.Combo(['en', 'fr', 'de', 'ru', 'ja', 'zh'], default_value='ja', key='tdist_combo')],
+        ])],
+        [sg.Spin([i for i in range(1000, 1000000)],
+                 initial_value=1000, key='recursion_spin'), sg.Text('Recursion limit')],
+        [sg.T('', font='any 1')],
+        [sg.Button('Start', size=(24, 2), key='start_button')]
+    ])
+    t2 = sg.Tab('Log', [
+        [sg.Text('tab2')]
+    ])
+    t3 = sg.Tab('Tab3', [
+        [sg.Text('tab3')]
+    ])
+
+    layout = [
+        [sg.TabGroup([[t1, t2, t3]])]
+    ]
+    return sg.Window(title, layout)
 
 
 if __name__ == '__main__':
