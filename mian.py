@@ -421,6 +421,37 @@ def click_stop_button():
 
 
 def create_window():
+    folder_icon = b'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsSAAALEgHS' \
+                  b'3X78AAABnUlEQVQ4y8WSv2rUQRSFv7vZgJFFsQg2EkWb4AvEJ8hqKVilSmFn3iNvIAp21' \
+                  b'oIW9haihBRKiqwElMVsIJjNrprsOr/5dyzml3UhEQIWHhjmcpn7zblw4B9lJ8Xag9mlmQb' \
+                  b'3AJzX3tOX8Tngzg349q7t5xcfzpKGhOFHnjx+9qLTzW8wsmFTL2Gzk7Y2O/k9kCbtwUZbV+' \
+                  b'Zvo8Md3PALrjoiqsKSR9ljpAJpwOsNtlfXfRvoNU8Arr/NsVo0ry5z4dZN5hoGqEzYDChBOo' \
+                  b'KwS/vSq0XW3y5NAI/uN1cvLqzQur4MCpBGEEd1PQDfQ74HYR+LfeQOAOYAmgAmbly+dgfid5CHP' \
+                  b'IKqC74L8RDyGPIYy7+QQjFWa7ICsQ8SpB/IfcJSDVMAJUwJkYDMNOEPIBxA/gnuMyYPijXAI3lMs' \
+                  b'e7FGnIKsIuqrxgRSeXOoYZUCI8pIKW/OHA7kD2YYcpAKgM5ABXk4qSsdJaDOMCsgTIYAlL5TQFTy' \
+                  b'UIZDmev0N/bnwqnylEBQS45UKnHx/lUlFvA3fo+jwR8ALb47/oNma38cuqiJ9AAAAAASUVORK5CYII='
+    file_icon = b'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsSAAALEgHS3X78AAABU0lEQV' \
+                b'Q4y52TzStEURiHn/ecc6XG54JSdlMkNhYWsiILS0lsJaUsLW2Mv8CfIDtr2VtbY4GUEvmIZnKbZsY977Uwt2H' \
+                b'cyW1+dTZvt6fn9557BGB+aaNQKBR2ifkbgWR+cX13ubO1svz++niVTA1ArDHDg91UahHFsMxbKWycYsjze4mu' \
+                b'TsP64vT43v7hSf/A0FgdjQPQWAmco68nB+T+SFSqNUQgcIbN1bn8Z3RwvL22MAvcu8TACFgrpMVZ4aUYcn77BM' \
+                b'DkxGgemAGOHIBXxRjBWZMKoCPA2h6qEUSRR2MF6GxUUMUaIUgBCNTnAcm3H2G5YQfgvccYIXAtDH7FoKq/AaqKl' \
+                b'brBj2trFVXfBPAea4SOIIsBeN9kkCwxsNkAqRWy7+B7Z00G3xVc2wZeMSI4S7sVYkSk5Z/4PyBWROqvox3A28' \
+                b'PN2cjUwinQC9QyckKALxj4kv2auK0xAAAAAElFTkSuQmCC'
+    STARTING_PATH = r'C:\Users\kunim\Downloads'
+    treedata = sg.TreeData()
+
+    def add_files_in_folder(parent, dirname):
+        files = os.listdir(dirname)
+        for f in files:
+            fullname = os.path.join(dirname, f)
+            if os.path.isdir(fullname):  # if it's a folder, add folder and recurse
+                treedata.Insert(parent, fullname, f, values=[], icon=folder_icon)
+                add_files_in_folder(fullname, fullname)
+            else:
+                treedata.Insert(parent, fullname, f, values=[], icon=file_icon)
+
+    add_files_in_folder('', STARTING_PATH)
+
     title = "Web to PDF"
     sg.theme('Default1')
     t1 = sg.Tab('Options', [
@@ -451,8 +482,10 @@ def create_window():
     t2 = sg.Tab('Log', [
         [sg.Multiline(size=(100, 30), font=('Consolas', 10), key='Output')],
     ])
-    # t3 = sg.Tab('Tab3', [
-    #     [sg.Text('tab3')]
+    # t3 = sg.Tab('PDF Tree View', [
+    #     [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=22, col0_width=30,
+    #              key='_TREE_', show_expanded=False, ),
+    #      ],
     # ])
 
     layout = [
