@@ -1,4 +1,5 @@
 import sys
+import fitz
 import json
 import time
 import glob
@@ -420,6 +421,16 @@ def click_stop_button():
     stop_thread = True
 
 
+def get_page(dlist_tab, pno, doc):
+    dlist = dlist_tab[pno]
+    if not dlist:
+        dlist_tab[pno] = doc[pno].getDisplayList()
+        dlist = dlist_tab[pno]
+    r = dlist.rect
+    pix = dlist.getPixmap(alpha=False)
+    return pix.getPNGData()
+
+
 def create_window():
     folder_icon = b'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsSAAALEgHS' \
                   b'3X78AAABnUlEQVQ4y8WSv2rUQRSFv7vZgJFFsQg2EkWb4AvEJ8hqKVilSmFn3iNvIAp21' \
@@ -437,7 +448,7 @@ def create_window():
                 b'DkxGgemAGOHIBXxRjBWZMKoCPA2h6qEUSRR2MF6GxUUMUaIUgBCNTnAcm3H2G5YQfgvccYIXAtDH7FoKq/AaqKl' \
                 b'brBj2trFVXfBPAea4SOIIsBeN9kkCwxsNkAqRWy7+B7Z00G3xVc2wZeMSI4S7sVYkSk5Z/4PyBWROqvox3A28' \
                 b'PN2cjUwinQC9QyckKALxj4kv2auK0xAAAAAElFTkSuQmCC'
-    STARTING_PATH = r'C:\Users\kunim\Downloads'
+    STARTING_PATH = default_dldir
     treedata = sg.TreeData()
 
     def add_files_in_folder(parent, dirname):
@@ -448,11 +459,19 @@ def create_window():
                 treedata.Insert(parent, fullname, f, values=[], icon=folder_icon)
                 add_files_in_folder(fullname, fullname)
             else:
-                treedata.Insert(parent, fullname, f, values=[], icon=file_icon)
+                path, ext = os.path.splitext(fullname)
+                if ext == '.pdf':
+                    treedata.Insert(parent, fullname, f, values=[], icon=file_icon)
 
     add_files_in_folder('', STARTING_PATH)
 
-    title = "Web to PDF"
+    doc = fitz.open(f'pdf{os.sep}blank.pdf')
+    page_count = len(doc)
+    dlist_tab = [None] * page_count
+    cur_page = 0
+    data = get_page(dlist_tab, cur_page, doc)
+    image_elem = sg.Image(data=data)
+
     sg.theme('Default1')
     t1 = sg.Tab('Options', [
         [sg.Text('URL  '), sg.Input(key='URL_input')],
@@ -482,16 +501,16 @@ def create_window():
     t2 = sg.Tab('Log', [
         [sg.Multiline(size=(100, 30), font=('Consolas', 10), key='Output')],
     ])
-    # t3 = sg.Tab('PDF Tree View', [
-    #     [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=22, col0_width=30,
-    #              key='_TREE_', show_expanded=False, ),
-    #      ],
-    # ])
+    t3 = sg.Tab('PDF Tree View', [
+        [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=22, col0_width=30,
+                 key='_TREE_', show_expanded=False, ), image_elem
+         ],
+    ])
 
     layout = [
-        [sg.TabGroup([[t1, t2]])]
+        [sg.TabGroup([[t1, t2, t3]])]
     ]
-    return sg.Window(title, layout)
+    return sg.Window("Web to PDF", layout)
 
 
 def main(args):
