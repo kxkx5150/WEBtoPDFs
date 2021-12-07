@@ -28,25 +28,27 @@ logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
 stop_thread = False
+pltfrm = platform.system()
+user_dir = ''
+default_dldir = r'~/Downloads'
+
+if pltfrm == 'Darwin':
+    user_dir = r'~/Library/Application Support/Google/Chrome'
+elif pltfrm == 'Windows':
+    user_dir = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + \
+               f'{os.sep}AppData{os.sep}Local{os.sep}Google{os.sep}Chrome{os.sep}User Data'
+    default_dldir = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + f'{os.sep}Downloads'
+else:
+    user_dir = r'~/.config/google-chrome'
 
 
 def init_selenium(app_options):
+    global user_dir
+    global default_dldir
     options = webdriver.ChromeOptions()
-    pltfrm = platform.system()
-
-    if pltfrm == 'Darwin':
-        if app_options['use_profile']:
-            options.add_argument('~/Library/Application Support/Google/Chrome')
-        app_options['os_downloads_path'] = '~/Downloads'
-    elif pltfrm == 'Linux':
-        if app_options['use_profile']:
-            options.add_argument('~/.config/google-chrome')
-        app_options['os_downloads_path'] = '~/Downloads'
-    else:
-        if app_options['use_profile']:
-            options.add_argument('--user-data-dir=' + f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] +
-                                 f'{os.sep}AppData{os.sep}Local{os.sep}Google{os.sep}Chrome{os.sep}User Data')
-        app_options['os_downloads_path'] = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + f'{os.sep}Downloads'
+    if app_options['use_profile']:
+        options.add_argument('--user-data-dir=' + user_dir)
+    app_options['os_downloads_path'] = default_dldir
 
     appstate = {
         "recentDestinations": [
@@ -424,6 +426,8 @@ def create_window():
     t1 = sg.Tab('Options', [
         [sg.Text('URL  '), sg.Input(key='URL_input')],
         [sg.Text('XPath'), sg.Input(default_text='/html/body', key='Xpath_input')],
+        # [sg.T('', font='any 1')],
+        # [sg.Text("Download folder "), sg.Input(key='-IN1-'), sg.FolderBrowse()],
         [sg.T('', font='any 1')],
         [sg.Checkbox('Same domain only', default=True, key='samedomain_checkbox')],
         [sg.Checkbox('Check parent dirctory', default=True, key='parent_checkbox')],
@@ -442,7 +446,7 @@ def create_window():
         [sg.Spin([i for i in range(1000, 1000000)],
                  initial_value=1000, key='recursion_spin'), sg.Text('Recursion limit')],
         [sg.T('', font='any 1')],
-        [sg.Button('Start', size=(24, 2), key='start_button'),sg.Button('Stop', size=(24, 2), key='stop_button')]
+        [sg.Button('Start', size=(24, 2), key='start_button'), sg.Button('Stop', size=(24, 2), key='stop_button')]
     ])
     t2 = sg.Tab('Log', [
         [sg.Multiline(size=(100, 30), font=('Consolas', 10), key='Output')],
