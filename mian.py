@@ -363,7 +363,20 @@ def loop_check_msg(window):
             click_start_button(window, values)
 
         elif event == 'stop_button':
-            click_stop_button()
+            data = read_pdf(r'C:\Users\kunim\Downloads\a.pdf')
+            window['image_viewer'].update(data=data)
+            # click_stop_button()
+
+        elif event == '_TREE_':
+            print('aaaaaaa')
+            values = values['_TREE_']
+            print(values)
+
+            # selected_items = tree.selection()
+            # if not selected_items:
+            #     return
+            # values = tree.item(selected_items[0])['values']
+            # pass
 
     if closeflg:
         window.close()
@@ -421,14 +434,21 @@ def click_stop_button():
     stop_thread = True
 
 
-def get_page(dlist_tab, pno, doc):
-    dlist = dlist_tab[pno]
-    if not dlist:
-        dlist_tab[pno] = doc[pno].getDisplayList()
+def read_pdf(pdfpath):
+    def get_page(pno):
         dlist = dlist_tab[pno]
-    r = dlist.rect
-    pix = dlist.getPixmap(alpha=False)
-    return pix.getPNGData()
+        if not dlist:
+            dlist_tab[pno] = doc[pno].getDisplayList()
+            dlist = dlist_tab[pno]
+        r = dlist.rect
+        pix = dlist.getPixmap(alpha=False)
+        return pix.getPNGData()
+
+    doc = fitz.open(pdfpath)
+    page_count = len(doc)
+    dlist_tab = [None] * page_count
+    cur_page = 0
+    return  get_page(cur_page)
 
 
 def create_window():
@@ -448,7 +468,6 @@ def create_window():
                 b'DkxGgemAGOHIBXxRjBWZMKoCPA2h6qEUSRR2MF6GxUUMUaIUgBCNTnAcm3H2G5YQfgvccYIXAtDH7FoKq/AaqKl' \
                 b'brBj2trFVXfBPAea4SOIIsBeN9kkCwxsNkAqRWy7+B7Z00G3xVc2wZeMSI4S7sVYkSk5Z/4PyBWROqvox3A28' \
                 b'PN2cjUwinQC9QyckKALxj4kv2auK0xAAAAAElFTkSuQmCC'
-    STARTING_PATH = default_dldir
     treedata = sg.TreeData()
 
     def add_files_in_folder(parent, dirname):
@@ -463,14 +482,10 @@ def create_window():
                 if ext == '.pdf':
                     treedata.Insert(parent, fullname, f, values=[], icon=file_icon)
 
-    add_files_in_folder('', STARTING_PATH)
+    add_files_in_folder('', default_dldir)
 
-    doc = fitz.open(f'pdf{os.sep}blank.pdf')
-    page_count = len(doc)
-    dlist_tab = [None] * page_count
-    cur_page = 0
-    data = get_page(dlist_tab, cur_page, doc)
-    image_elem = sg.Image(data=data)
+    data = read_pdf(f'pdf{os.sep}blank.pdf')
+    image_elem = sg.Image(data=data, key='image_viewer')
 
     sg.theme('Default1')
     t1 = sg.Tab('Options', [
