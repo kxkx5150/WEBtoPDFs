@@ -378,6 +378,9 @@ def loop_check_msg(window):
                 if ext == '.pdf':
                     refresh_pdf_viewer(val)
 
+        elif event == '_REFRESH_':
+            refresh_folder_tree()
+
     if closeflg:
         window.close()
 
@@ -539,12 +542,14 @@ def create_window():
         [sg.Button('Start', size=(24, 2), key='_START_'), sg.Button('Stop', size=(24, 2), key='_STOP_')]
     ])
     t2 = sg.Tab('Log', [
-        [sg.Multiline(size=(110, 45), font=('Consolas', 10), key='Output', disabled=True, )],
+        [sg.Multiline(size=(112, 45), font=('Consolas', 10), key='Output', disabled=True, )],
     ])
     t3 = sg.Tab('PDF Tree View', [
-        [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
-                 key='_TREE_', enable_events=True, show_expanded=False, ),
-         sg.Image(data=[], key='image_viewer', size=(500, 700))
+        [sg.Frame('', [
+            [sg.Button('Refresh', size=(12, 1), key='_REFRESH_')],
+            [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
+                     key='_TREE_', enable_events=True, show_expanded=False, )]]),
+         sg.Image(data=None, key='image_viewer', size=(500, 700))
          ],
     ])
     layout = [
