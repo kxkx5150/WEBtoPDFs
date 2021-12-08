@@ -1,4 +1,7 @@
+import io
 import sys
+
+import PIL
 import fitz
 import json
 import time
@@ -8,6 +11,7 @@ import shutil
 import os.path
 import platform
 import threading
+from PIL import Image
 import PySimpleGUI as sg
 from urllib.parse import urlparse
 from selenium import webdriver
@@ -22,6 +26,7 @@ from utils.link_nodes import LinkNodes
 from utils import allow_urls, deny_urls, deny_exts, allow_exts
 from utils.country import cconde
 
+window = None
 logger = getLogger(__name__)
 handler = StreamHandler()
 handler.setLevel(DEBUG)
@@ -350,33 +355,28 @@ def loop_check_msg(window):
     while True:
         closeflg = False
         event, values = window.read()
+        pass
 
         if event == sg.WIN_CLOSED or event == 'Quit':
             closeflg = True
             break
 
-        elif event == 'start_button':
+        elif event == '_START_':
             top_url = values['URL_input']
             if not top_url:
-                print('url error')
                 continue
             click_start_button(window, values)
 
-        elif event == 'stop_button':
-            data = read_pdf(r'C:\Users\kunim\Downloads\a.pdf')
-            window['image_viewer'].update(data=data)
-            # click_stop_button()
+        elif event == '_STOP_':
+            click_stop_button()
 
         elif event == '_TREE_':
-            print('aaaaaaa')
             values = values['_TREE_']
-            print(values)
-
-            # selected_items = tree.selection()
-            # if not selected_items:
-            #     return
-            # values = tree.item(selected_items[0])['values']
-            # pass
+            val = values[0]
+            if os.path.isfile(val):
+                path, ext = os.path.splitext(val)
+                if ext == '.pdf':
+                    refresh_pdf_viewer(val)
 
     if closeflg:
         window.close()
@@ -424,7 +424,7 @@ def click_start_button(window, values):
 
     global stop_thread
     stop_thread = False
-    window['start_button'].update(disabled=True)
+    window['_START_'].update(disabled=True)
     start_log_tab(window, app_options)
     create_another_process(app_options, window)
 
@@ -434,7 +434,7 @@ def click_stop_button():
     stop_thread = True
 
 
-def read_pdf(pdfpath):
+def read_pdf(pdfpath=f'pdf{os.sep}blank.pdf'):
     def get_page(pno):
         dlist = dlist_tab[pno]
         if not dlist:
@@ -448,10 +448,11 @@ def read_pdf(pdfpath):
     page_count = len(doc)
     dlist_tab = [None] * page_count
     cur_page = 0
-    return  get_page(cur_page)
+    return get_page(cur_page)
 
 
-def create_window():
+def create_folder_tree(dir_path):
+    treedata = sg.TreeData()
     folder_icon = b'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsSAAALEgHS' \
                   b'3X78AAABnUlEQVQ4y8WSv2rUQRSFv7vZgJFFsQg2EkWb4AvEJ8hqKVilSmFn3iNvIAp21' \
                   b'oIW9haihBRKiqwElMVsIJjNrprsOr/5dyzml3UhEQIWHhjmcpn7zblw4B9lJ8Xag9mlmQb' \
@@ -468,13 +469,12 @@ def create_window():
                 b'DkxGgemAGOHIBXxRjBWZMKoCPA2h6qEUSRR2MF6GxUUMUaIUgBCNTnAcm3H2G5YQfgvccYIXAtDH7FoKq/AaqKl' \
                 b'brBj2trFVXfBPAea4SOIIsBeN9kkCwxsNkAqRWy7+B7Z00G3xVc2wZeMSI4S7sVYkSk5Z/4PyBWROqvox3A28' \
                 b'PN2cjUwinQC9QyckKALxj4kv2auK0xAAAAAElFTkSuQmCC'
-    treedata = sg.TreeData()
 
     def add_files_in_folder(parent, dirname):
         files = os.listdir(dirname)
         for f in files:
             fullname = os.path.join(dirname, f)
-            if os.path.isdir(fullname):  # if it's a folder, add folder and recurse
+            if os.path.isdir(fullname):
                 treedata.Insert(parent, fullname, f, values=[], icon=folder_icon)
                 add_files_in_folder(fullname, fullname)
             else:
@@ -482,16 +482,34 @@ def create_window():
                 if ext == '.pdf':
                     treedata.Insert(parent, fullname, f, values=[], icon=file_icon)
 
-    add_files_in_folder('', default_dldir)
+    add_files_in_folder('', dir_path)
+    return treedata
 
-    data = read_pdf(f'pdf{os.sep}blank.pdf')
-    image_elem = sg.Image(data=data, key='image_viewer')
 
+def refresh_pdf_viewer(pdf_path):
+    print(pdf_path)
+    data = read_pdf(pdf_path)
+    img = Image.open(io.BytesIO(data))
+    image = img.resize((500, 700), PIL.Image.ANTIALIAS)
+    output = io.BytesIO()
+    image.save(output, format="png")
+    ndata = output.getvalue()
+    window['image_viewer'].update(data=ndata, size=(500, 700))
+
+
+def refresh_folder_tree():
+    treedata = create_folder_tree(default_dldir)
+    window['_TREE_'].update(values=treedata)
+
+
+def create_window():
     sg.theme('Default1')
+    treedata = create_folder_tree(default_dldir)
+
     t1 = sg.Tab('Options', [
         [sg.Text('URL  '), sg.Input(key='URL_input')],
         [sg.Text('XPath'), sg.Input(default_text='/html/body', key='Xpath_input')],
-        # [sg.T('', font='any 1')],
+        [sg.T('', font='any 1')],
         # [sg.Text("Download folder "), sg.Input(key='-IN1-'), sg.FolderBrowse()],
         [sg.T('', font='any 1')],
         [sg.Checkbox('Same domain only', default=True, key='samedomain_checkbox')],
@@ -500,7 +518,9 @@ def create_window():
         [sg.T('', font='any 1')],
         [sg.Text('Depth'), sg.Combo(['1', '2', '3', '4', '5', '6', '7', '8', '9'],
                                     default_value='2', key='depth_combo')],
+        [sg.T('', font='any 1')],
         [sg.Text('Store'), sg.Combo(['tree', 'sequential'], default_value='tree', key='store_combo')],
+        [sg.T('', font='any 1')],
         [sg.T('', font='any 1')],
         [sg.Frame('Translate', [
             [sg.Checkbox('Google translate', default=False, key='gtranslate_checkbox')],
@@ -508,20 +528,25 @@ def create_window():
             [sg.Text('Dist'),
              sg.Combo(cconde, default_value='ja', key='tdist_combo')],
         ])],
+        [sg.T('', font='any 1')],
+        [sg.T('', font='any 1')],
         [sg.Spin([i for i in range(1000, 1000000)],
                  initial_value=1000, key='recursion_spin'), sg.Text('Recursion limit')],
         [sg.T('', font='any 1')],
-        [sg.Button('Start', size=(24, 2), key='start_button'), sg.Button('Stop', size=(24, 2), key='stop_button')]
+        [sg.T('', font='any 1')],
+        [sg.T('', font='any 1')],
+        [sg.T('', font='any 1')],
+        [sg.Button('Start', size=(24, 2), key='_START_'), sg.Button('Stop', size=(24, 2), key='_STOP_')]
     ])
     t2 = sg.Tab('Log', [
-        [sg.Multiline(size=(100, 30), font=('Consolas', 10), key='Output')],
+        [sg.Multiline(size=(110, 45), font=('Consolas', 10), key='Output', disabled=True, )],
     ])
     t3 = sg.Tab('PDF Tree View', [
-        [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=22, col0_width=30,
-                 key='_TREE_', show_expanded=False, ), image_elem
+        [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
+                 key='_TREE_', enable_events=True, show_expanded=False, ),
+         sg.Image(data=[], key='image_viewer', size=(500, 700))
          ],
     ])
-
     layout = [
         [sg.TabGroup([[t1, t2, t3]])]
     ]
@@ -533,6 +558,7 @@ def main(args):
         for file in files:
             os.remove(os.path.join(root, file))
 
+    global window
     window = create_window()
     loop_check_msg(window)
 
