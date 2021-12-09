@@ -498,7 +498,6 @@ def create_folder_tree(dir_path):
 
 
 def refresh_pdf_viewer(pdf_path):
-    print(pdf_path)
     data = read_pdf(pdf_path)
     img = Image.open(io.BytesIO(data))
     image = img.resize((500, 700), PIL.Image.ANTIALIAS)
@@ -539,7 +538,6 @@ def open_expand_dirs():
 
     for key in treedata.tree_dict:
         if key in open_dirs:
-            print(key)
             window['_TREE_'].Widget.item(key_to_id(key), open=True)
 
 
@@ -557,6 +555,19 @@ def delete_tree_node(window, key):
     parent_node.children.remove(node)
     window['_TREE_'].Update(values=treedata)
     open_expand_dirs()
+    delete_file(key)
+
+
+def delete_file(path):
+    print("delete : " + path)
+    if os.path.isdir(path):
+        if os.path.exists(path):
+            shutil.rmtree(path)
+            refresh_pdf_viewer(f'pdf{os.sep}blank.pdf')
+    else:
+        if os.path.exists(path):
+            os.remove(path)
+            refresh_pdf_viewer(f'pdf{os.sep}blank.pdf')
 
 
 def create_window():
