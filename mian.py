@@ -28,17 +28,20 @@ from utils.country import cconde
 
 window = None
 treedata = None
+pdf_path = ""
+pdf_page = 0
 open_dirs = []
+stop_thread = False
+pltfrm = platform.system()
+user_dir = ''
+default_dldir = r'~/Downloads'
+
 logger = getLogger(__name__)
 handler = StreamHandler()
 handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
-stop_thread = False
-pltfrm = platform.system()
-user_dir = ''
-default_dldir = r'~/Downloads'
 
 if pltfrm == 'Darwin':
     user_dir = r'~/Library/Application Support/Google/Chrome'
@@ -389,6 +392,14 @@ def loop_check_msg(window):
             values = values['_TREE_']
             delete_tree_node(window, values[0])
 
+        elif event == '_PRE_PAGE_':
+            if pdf_path:
+                refresh_pdf_viewer(pdf_path, -1)
+
+        elif event == '_NEXT_PAGE_':
+            if pdf_path:
+                refresh_pdf_viewer(pdf_path, 1)
+
     if closeflg:
         window.close()
 
@@ -445,7 +456,12 @@ def click_stop_button():
     stop_thread = True
 
 
-def read_pdf(pdfpath=f'pdf{os.sep}blank.pdf'):
+def read_pdf(pdfpath, cpage):
+    global pdf_path
+    global pdf_page
+
+    pdf_path = pdfpath
+
     def get_page(pno):
         dlist = dlist_tab[pno]
         if not dlist:
@@ -458,8 +474,18 @@ def read_pdf(pdfpath=f'pdf{os.sep}blank.pdf'):
     doc = fitz.open(pdfpath)
     page_count = len(doc)
     dlist_tab = [None] * page_count
-    cur_page = 0
-    return get_page(cur_page)
+
+    if cpage == 0:
+        pdf_page = 0
+    else:
+        pdf_page += cpage
+
+    if pdf_page < 0 :
+        pdf_page = page_count-1
+    elif page_count <= pdf_page:
+        pdf_page = 0
+
+    return get_page(pdf_page)
 
 
 def create_folder_tree(dir_path):
@@ -497,8 +523,8 @@ def create_folder_tree(dir_path):
     return treedata
 
 
-def refresh_pdf_viewer(pdf_path):
-    data = read_pdf(pdf_path)
+def refresh_pdf_viewer(pdf_path, cpage=0):
+    data = read_pdf(pdf_path, cpage)
     img = Image.open(io.BytesIO(data))
     image = img.resize((500, 700), PIL.Image.ANTIALIAS)
     output = io.BytesIO()
@@ -538,25 +564,29 @@ def open_expand_dirs():
 
     for key in treedata.tree_dict:
         if key in open_dirs:
-            window['_TREE_'].Widget.item(key_to_id(key), open=True)
+            if key_to_id(key):
+                window['_TREE_'].Widget.item(key_to_id(key), open=True)
 
 
 def delete_tree_node(window, key):
     global open_dirs
     global treedata
+    global pdf_page
+    global pdf_path
 
     open_dirs.clear()
     check_expand_dirs()
 
     if key == '':
         return
+    pdf_path = ""
+    pdf_page = 0
     node = treedata.tree_dict[key]
     parent_node = treedata.tree_dict[node.parent]
     parent_node.children.remove(node)
     window['_TREE_'].Update(values=treedata)
     open_expand_dirs()
     delete_file(key)
-
 
 def delete_file(path):
     print("delete : " + path)
@@ -612,7 +642,8 @@ def create_window():
     ])
     t3 = sg.Tab('PDF Tree View', [
         [sg.Frame('', [
-            [sg.Button('Refresh', size=(10, 1), key='_REFRESH_'), sg.Button('Delete', size=(10, 1), key='_DELETE_')],
+            [sg.Button('Refresh', size=(10, 1), key='_REFRESH_'), sg.Button('Delete', size=(10, 1), key='_DELETE_'),
+             sg.Button('<', size=(1, 1), key='_PRE_PAGE_'), sg.Button('>', size=(1, 1), key='_NEXT_PAGE_')],
             [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
                      key='_TREE_', enable_events=True, show_expanded=False, )]]),
          sg.Image(data=None, key='image_viewer', size=(500, 700))
