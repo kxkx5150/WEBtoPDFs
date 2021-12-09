@@ -32,7 +32,6 @@ pdf_path = ""
 pdf_page = 0
 open_dirs = []
 stop_thread = False
-pltfrm = platform.system()
 user_dir = ''
 default_dldir = r'~/Downloads'
 
@@ -42,6 +41,7 @@ handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
+pltfrm = platform.system()
 
 if pltfrm == 'Darwin':
     user_dir = r'~/Library/Application Support/Google/Chrome'
@@ -400,6 +400,12 @@ def loop_check_msg(window):
             if pdf_path:
                 refresh_pdf_viewer(pdf_path, 1)
 
+        elif event == '_ALLOW_DENY_':
+            read_allow_deny_list(values['_ALLOW_DENY_'])
+
+        elif event == '_SAVE_LIST_':
+            save_list_text(values)
+
     if closeflg:
         window.close()
 
@@ -480,8 +486,8 @@ def read_pdf(pdfpath, cpage):
     else:
         pdf_page += cpage
 
-    if pdf_page < 0 :
-        pdf_page = page_count-1
+    if pdf_page < 0:
+        pdf_page = page_count - 1
     elif page_count <= pdf_page:
         pdf_page = 0
 
@@ -588,6 +594,7 @@ def delete_tree_node(window, key):
     open_expand_dirs()
     delete_file(key)
 
+
 def delete_file(path):
     print("delete : " + path)
     if os.path.isdir(path):
@@ -600,45 +607,99 @@ def delete_file(path):
             refresh_pdf_viewer(f'pdf{os.sep}blank.pdf')
 
 
+def read_allow_deny_list(val):
+    if val == 'Allow URLs':
+        read_list_text(f'utils{os.sep}allow_urls.py')
+
+    elif val == 'Deny URLs':
+        read_list_text(f'utils{os.sep}deny_urls.py')
+
+    elif val == 'Allow Extensions':
+        read_list_text(f'utils{os.sep}allow_exts.py')
+
+    elif val == 'Deny Extensions':
+        read_list_text(f'utils{os.sep}deny_exts.py')
+
+
+def read_list_text(list_path):
+    f = open(list_path, 'r')
+    data = f.read()
+    f.close()
+    window['_ALLOW_DENY_TEXT_'].update(data)
+
+
+def save_list_text(values):
+    val = values['_ALLOW_DENY_']
+    if val == 'Allow URLs':
+        save_text(values, f'utils{os.sep}allow_urls.py')
+
+    elif val == 'Deny URLs':
+        save_text(values, f'utils{os.sep}deny_urls.py')
+
+    elif val == 'Allow Extensions':
+        save_text(values, f'utils{os.sep}allow_exts.py')
+
+    elif val == 'Deny Extensions':
+        save_text(values, f'utils{os.sep}deny_exts.py')
+
+
+def save_text(values, list_path):
+    txt = ""
+    for zeichen in values["_ALLOW_DENY_TEXT_"]:
+        txt += zeichen
+
+    f = open(list_path, 'w')
+    f.write(txt)
+    f.close()
+
+
 def create_window():
     global treedata
     sg.theme('Default1')
     treedata = create_folder_tree(default_dldir)
 
     t1 = sg.Tab('Options', [
-        [sg.Text('URL  '), sg.Input(key='URL_input')],
-        [sg.Text('XPath'), sg.Input(default_text='/html/body', key='Xpath_input')],
-        [sg.T('', font='any 1')],
-        # [sg.Text("Download folder "), sg.Input(key='-IN1-'), sg.FolderBrowse()],
-        [sg.T('', font='any 1')],
-        [sg.Checkbox('Same domain only', default=True, key='samedomain_checkbox')],
-        [sg.Checkbox('Check parent dirctory', default=True, key='parent_checkbox')],
-        [sg.Checkbox('Use chrome profile', default=False, key='profile_checkbox')],
-        [sg.T('', font='any 1')],
-        [sg.Text('Depth'), sg.Combo(['1', '2', '3', '4', '5', '6', '7', '8', '9'],
-                                    default_value='2', key='depth_combo')],
-        [sg.T('', font='any 1')],
-        [sg.Text('Store'), sg.Combo(['tree', 'sequential'], default_value='tree', key='store_combo')],
-        [sg.T('', font='any 1')],
-        [sg.T('', font='any 1')],
-        [sg.Frame('Translate', [
-            [sg.Checkbox('Google translate', default=False, key='gtranslate_checkbox')],
-            [sg.Text('Src '), sg.Combo(cconde, default_value='en', key='tsrc_combo')],
-            [sg.Text('Dist'),
-             sg.Combo(cconde, default_value='ja', key='tdist_combo')],
-        ])],
-        [sg.T('', font='any 1')],
-        [sg.T('', font='any 1')],
-        [sg.Spin([i for i in range(1000, 1000000)],
-                 initial_value=1000, key='recursion_spin'), sg.Text('Recursion limit')],
-        [sg.T('', font='any 1')],
-        [sg.T('', font='any 1')],
-        [sg.T('', font='any 1')],
-        [sg.T('', font='any 1')],
-        [sg.Button('Start', size=(24, 2), key='_START_'), sg.Button('Stop', size=(24, 2), key='_STOP_')]
+        [sg.Frame('', [
+            [sg.Text('URL  '), sg.Input(key='URL_input')],
+            [sg.Text('XPath'), sg.Input(default_text='/html/body', key='Xpath_input')],
+            [sg.T('', font='any 1')],
+            # [sg.Text("Download folder "), sg.Input(key='-IN1-'), sg.FolderBrowse()],
+            [sg.T('', font='any 1')],
+            [sg.Checkbox('Same domain only', default=True, key='samedomain_checkbox')],
+            [sg.Checkbox('Check parent dirctory', default=True, key='parent_checkbox')],
+            [sg.Checkbox('Use chrome profile', default=False, key='profile_checkbox')],
+            [sg.T('', font='any 1')],
+            [sg.Text('Depth'), sg.Combo(['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                                        default_value='2', key='depth_combo')],
+            [sg.T('', font='any 1')],
+            [sg.Text('Store'), sg.Combo(['tree', 'sequential'], default_value='tree', key='store_combo')],
+            [sg.T('', font='any 1')],
+            [sg.T('', font='any 1')],
+            [sg.Frame('Translate', [
+                [sg.Checkbox('Google translate', default=False, key='gtranslate_checkbox')],
+                [sg.Text('Src '), sg.Combo(cconde, default_value='en', key='tsrc_combo')],
+                [sg.Text('Dist'),
+                 sg.Combo(cconde, default_value='ja', key='tdist_combo')],
+            ])],
+            [sg.T('', font='any 1')],
+            [sg.T('', font='any 1')],
+            [sg.Spin([i for i in range(1000, 1000000)],
+                     initial_value=1000, key='recursion_spin'), sg.Text('Recursion limit')],
+            [sg.T('', font='any 1')],
+            [sg.T('', font='any 1')],
+            [sg.T('', font='any 1')],
+            [sg.T('', font='any 1')],
+            [sg.Button('Start', size=(24, 2), key='_START_'), sg.Button('Stop', size=(24, 2), key='_STOP_')]
+        ], vertical_alignment='top'),
+         sg.Frame('', [
+             [sg.InputCombo(('Allow URLs', 'Deny URLs', 'Allow Extensions', 'Deny Extensions'), size=(20, 1),
+                            enable_events=True, key='_ALLOW_DENY_'),
+              sg.Button('Save', size=(10, 1), key='_SAVE_LIST_')],
+             [sg.Multiline(size=(49, 44), font=('Consolas', 10), key='_ALLOW_DENY_TEXT_')],
+         ], vertical_alignment='top')]
     ])
     t2 = sg.Tab('Log', [
-        [sg.Multiline(size=(112, 45), font=('Consolas', 10), key='Output', disabled=True, )],
+        [sg.Multiline(size=(112, 46), font=('Consolas', 10), key='Output', disabled=True)],
     ])
     t3 = sg.Tab('PDF Tree View', [
         [sg.Frame('', [
@@ -652,7 +713,7 @@ def create_window():
     layout = [
         [sg.TabGroup([[t1, t2, t3]])]
     ]
-    return sg.Window("Web to PDF", layout)
+    return sg.Window("Web to PDF", layout, finalize=True)
 
 
 def main(args):
@@ -662,6 +723,7 @@ def main(args):
 
     global window
     window = create_window()
+    window['_ALLOW_DENY_TEXT_'].Widget.configure(wrap='none')
     loop_check_msg(window)
 
 
