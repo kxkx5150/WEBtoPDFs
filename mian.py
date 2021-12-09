@@ -28,6 +28,7 @@ from utils.country import cconde
 
 window = None
 treedata = None
+open_dirs = []
 logger = getLogger(__name__)
 handler = StreamHandler()
 handler.setLevel(DEBUG)
@@ -513,32 +514,49 @@ def refresh_folder_tree():
     window['_TREE_'].update(values=treedata)
 
 
-# def delete_tree_node(values):
-#     global treedata
-#     val = values[0]
-#     if os.path.isdir(val):
-#
-#         # treedata.delete(val)
-#         pass
-#     else:
-#         node = treedata.tree_dict[val]
-#         parent1_node = treedata.tree_dict[node.parent]
-#         parent1_node.children.remove(node)
-#         # treedata.delete(val)
-#         pass
+def key_to_id(key):
+    for k, v in window['_TREE_'].IdToKey.items():
+        if v == key:
+            return k
+    return None
+
+
+def check_expand_dirs():
+    global treedata
+    global open_dirs
+
+    for key in treedata.tree_dict:
+        node = treedata.tree_dict[key]
+        if key_to_id(key):
+            item = window['_TREE_'].Widget.item(key_to_id(key))
+            if item['open']:
+                open_dirs.append(key)
+
+
+def open_expand_dirs():
+    global treedata
+    global open_dirs
+
+    for key in treedata.tree_dict:
+        if key in open_dirs:
+            print(key)
+            window['_TREE_'].Widget.item(key_to_id(key), open=True)
 
 
 def delete_tree_node(window, key):
+    global open_dirs
     global treedata
 
-    # if key == '':
-    #     return
-    # node = treedata.tree_dict[key]
-    # key_list = [key, ]
-    # parent_node = treedata.tree_dict[node.parent]
-    # parent_node.children.remove(node)
-    # window['_TREE_'].Update(values=treedata)
-    # window.Refresh()
+    open_dirs.clear()
+    check_expand_dirs()
+
+    if key == '':
+        return
+    node = treedata.tree_dict[key]
+    parent_node = treedata.tree_dict[node.parent]
+    parent_node.children.remove(node)
+    window['_TREE_'].Update(values=treedata)
+    open_expand_dirs()
 
 
 def create_window():
@@ -583,7 +601,7 @@ def create_window():
     ])
     t3 = sg.Tab('PDF Tree View', [
         [sg.Frame('', [
-            [sg.Button('Refresh', size=(10, 1), key='_REFRESH_'),sg.Button('Delete', size=(10, 1), key='_DELETE_')],
+            [sg.Button('Refresh', size=(10, 1), key='_REFRESH_'), sg.Button('Delete', size=(10, 1), key='_DELETE_')],
             [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
                      key='_TREE_', enable_events=True, show_expanded=False, )]]),
          sg.Image(data=None, key='image_viewer', size=(500, 700))
