@@ -531,13 +531,13 @@ def refresh_folder_tree():
 def delete_tree_node(window, key):
     global treedata
 
-    if key == '':
-        return
-    node = treedata.tree_dict[key]
-    key_list = [key, ]
-    parent_node = treedata.tree_dict[node.parent]
-    parent_node.children.remove(node)
-    window['_TREE_'].Update(values=treedata)
+    # if key == '':
+    #     return
+    # node = treedata.tree_dict[key]
+    # key_list = [key, ]
+    # parent_node = treedata.tree_dict[node.parent]
+    # parent_node.children.remove(node)
+    # window['_TREE_'].Update(values=treedata)
     # window.Refresh()
 
 
