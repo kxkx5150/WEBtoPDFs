@@ -27,6 +27,7 @@ from utils import allow_urls, deny_urls, deny_exts, allow_exts
 from utils.country import cconde
 
 window = None
+treedata = None
 logger = getLogger(__name__)
 handler = StreamHandler()
 handler.setLevel(DEBUG)
@@ -372,6 +373,8 @@ def loop_check_msg(window):
 
         elif event == '_TREE_':
             values = values['_TREE_']
+            if len(values) < 1:
+                continue
             val = values[0]
             if os.path.isfile(val):
                 path, ext = os.path.splitext(val)
@@ -380,6 +383,10 @@ def loop_check_msg(window):
 
         elif event == '_REFRESH_':
             refresh_folder_tree()
+
+        elif event == '_DELETE_':
+            values = values['_TREE_']
+            delete_tree_node(window, values[0])
 
     if closeflg:
         window.close()
@@ -501,11 +508,41 @@ def refresh_pdf_viewer(pdf_path):
 
 
 def refresh_folder_tree():
+    global treedata
     treedata = create_folder_tree(default_dldir)
     window['_TREE_'].update(values=treedata)
 
 
+# def delete_tree_node(values):
+#     global treedata
+#     val = values[0]
+#     if os.path.isdir(val):
+#
+#         # treedata.delete(val)
+#         pass
+#     else:
+#         node = treedata.tree_dict[val]
+#         parent1_node = treedata.tree_dict[node.parent]
+#         parent1_node.children.remove(node)
+#         # treedata.delete(val)
+#         pass
+
+
+def delete_tree_node(window, key):
+    global treedata
+
+    if key == '':
+        return
+    node = treedata.tree_dict[key]
+    key_list = [key, ]
+    parent_node = treedata.tree_dict[node.parent]
+    parent_node.children.remove(node)
+    window['_TREE_'].Update(values=treedata)
+    # window.Refresh()
+
+
 def create_window():
+    global treedata
     sg.theme('Default1')
     treedata = create_folder_tree(default_dldir)
 
@@ -546,7 +583,7 @@ def create_window():
     ])
     t3 = sg.Tab('PDF Tree View', [
         [sg.Frame('', [
-            [sg.Button('Refresh', size=(12, 1), key='_REFRESH_')],
+            [sg.Button('Refresh', size=(10, 1), key='_REFRESH_'),sg.Button('Delete', size=(10, 1), key='_DELETE_')],
             [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
                      key='_TREE_', enable_events=True, show_expanded=False, )]]),
          sg.Image(data=None, key='image_viewer', size=(500, 700))
