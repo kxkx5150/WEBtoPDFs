@@ -331,7 +331,7 @@ def create_extract_links(app_options):
     exout = window['_EXTRACT_OUTPUT_']
     for lnk in app_options['all_links']:
         window['_EXTRACT_OUTPUT_'].print(lnk)
-        link_list_txt += lnk
+        link_list_txt += lnk + '\n'
 
 
 def create_image_links(app_options):
@@ -339,7 +339,7 @@ def create_image_links(app_options):
     window['Extract Links'].select()
     for imgnode in app_options['img_Nodes']:
         window['_EXTRACT_OUTPUT_'].print(imgnode.img_url)
-        link_list_txt += imgnode.img_url
+        link_list_txt += imgnode.img_url + '\n'
 
 
 def change_url_filter(window, values):
