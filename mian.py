@@ -803,7 +803,8 @@ def create_window():
         [sg.Text('URL Filter'), sg.Input(size=(50, 1), enable_events=True, key='_URL_FILTER_')],
         [sg.Multiline(size=(112, 30), font=('Consolas', 10), key='_EXTRACT_OUTPUT_')],
         [sg.Button('Download All Files', size=(20, 2), key='_DOWNLOAD_ALL_')],
-        [sg.ProgressBar(100, orientation='h', size=(25, 15), key='_PROGRESS_BAR_', bar_color=('#39B60A', '#fff'))]
+        [sg.ProgressBar(100, orientation='h', size=(25, 15), key='_PROGRESS_BAR_', bar_color=('#39B60A', '#fff'))],
+        [sg.ProgressBar(100, orientation='h', size=(25, 15), key='_TOTAL_PROGRESS_BAR_', bar_color=('#39B60A', '#fff'))]
     ])
 
     layout = [
