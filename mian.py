@@ -1,6 +1,5 @@
 import io
 import sys
-
 import PIL
 import fitz
 import json
@@ -23,6 +22,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from logging import getLogger, StreamHandler, DEBUG
 from utils.link_node import LinkNode
 from utils.link_nodes import LinkNodes
+from utils.img_node import ImgNode
+from utils.downloader import Downloader
 from utils import allow_urls, deny_urls, deny_exts, allow_exts
 from utils.country import cconde
 
@@ -31,6 +32,7 @@ treedata = None
 pdf_path = ""
 pdf_page = 0
 open_dirs = []
+link_list_txt = ""
 stop_thread = False
 user_dir = ''
 default_dldir = r'~/Downloads'
@@ -41,8 +43,8 @@ handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
-pltfrm = platform.system()
 
+pltfrm = platform.system()
 if pltfrm == 'Darwin':
     user_dir = r'~/Library/Application Support/Google/Chrome'
 elif pltfrm == 'Windows':
@@ -194,7 +196,7 @@ def check_page(driver, crntnode, app_options):
             href = elem.get_attribute("href")
             if href:
                 lnknod = LinkNode(href, crntnode)
-                child_linknodes.check_append(lnknod)
+                child_linknodes.check_append(lnknod, app_options)
                 lnknod.set_current_linknodes(child_linknodes)
                 app_options['log']('check:', href, text_color='gray')
                 print('check:', href)
@@ -203,7 +205,7 @@ def check_page(driver, crntnode, app_options):
     crntnode.append_link_nodes(child_linknodes)
 
 
-def start(driver, linknodes, crnt_depth, app_options):
+def start(driver, linknodes, crnt_depth, app_options, mode):
     if stop_thread:
         app_options['window']['Log'].select()
         app_options['log']("stop thread", text_color='white', background_color='red')
@@ -241,11 +243,13 @@ def start(driver, linknodes, crnt_depth, app_options):
         else:
             time.sleep(1)
 
-        crntnode.set_title(driver.title)
-        app_options['log']('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url, text_color='blue')
-
-        print('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url)
-        save_pdf(driver, crntnode, app_options)
+        if mode == 'pdf':
+            crntnode.set_title(driver.title)
+            app_options['log']('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url, text_color='blue')
+            print('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url)
+            save_pdf(driver, crntnode, app_options)
+        elif mode == 'imglink':
+            get_image_links(driver, app_options)
 
         if crntnode.dlimg_path and app_options['use_screenshot']:
             create_screenshot(driver, crntnode.dlimg_path)
@@ -267,22 +271,22 @@ def start(driver, linknodes, crnt_depth, app_options):
                 crnt_depth += 1
                 app_options['log']('---down', text_color='deep pink')
                 print('---down')
-                start(driver, crntnode.child_linknodes, crnt_depth, app_options)
+                start(driver, crntnode.child_linknodes, crnt_depth, app_options, mode)
             else:
-                next_linknode(driver, linknodes, crnt_depth, app_options)
+                next_linknode(driver, linknodes, crnt_depth, app_options, mode)
 
         else:
-            next_linknode(driver, linknodes, crnt_depth, app_options)
+            next_linknode(driver, linknodes, crnt_depth, app_options, mode)
 
     elif crnt_depth == app_options['depth']:
-        next_linknode(driver, linknodes, crnt_depth, app_options)
+        next_linknode(driver, linknodes, crnt_depth, app_options, mode)
 
 
-def next_linknode(driver, linknodes, crnt_depth, app_options):
+def next_linknode(driver, linknodes, crnt_depth, app_options, mode):
     crntnode = linknodes.get_current_node()
 
     if crntnode:
-        start(driver, linknodes, crnt_depth, app_options)
+        start(driver, linknodes, crnt_depth, app_options, mode)
     else:
         lnknds = linknodes
         while True:
@@ -292,14 +296,67 @@ def next_linknode(driver, linknodes, crnt_depth, app_options):
             if crnt_depth < 2:
                 app_options['log']('---root')
                 print('---root')
+                if mode == 'extlink':
+                    create_extract_links(app_options)
+                elif mode == 'imglink':
+                    create_image_links(app_options)
+
                 break
 
             prntnode = lnknds.prntnode
             lnknds = prntnode.current_linknodes
             crntnode = lnknds.get_current_node()
             if crntnode:
-                start(driver, lnknds, crnt_depth, app_options)
+                start(driver, lnknds, crnt_depth, app_options, mode)
                 break
+
+
+def get_image_links(driver, app_options):
+    prntelem = driver.find_element(by=By.XPATH, value=app_options['xpath'])
+    elems = prntelem.find_elements(By.XPATH, 'descendant::img[@src]')
+    if prntelem:
+        for elem in elems:
+            if elem.size['width'] and elem.size['height']:
+                src = elem.get_attribute("src")
+                if src and src not in app_options['img_links']:
+                    app_options['img_links'].append(src)
+                    imgnode = ImgNode(src, elem.size)
+                    app_options['img_Nodes'].append(imgnode)
+
+
+def create_extract_links(app_options):
+    global link_list_txt
+    window['Extract Links'].select()
+    app_options['all_links'] = sorted(app_options['all_links'])
+    exout = window['_EXTRACT_OUTPUT_']
+    for lnk in app_options['all_links']:
+        window['_EXTRACT_OUTPUT_'].print(lnk)
+        link_list_txt += lnk
+
+
+def create_image_links(app_options):
+    global link_list_txt
+    window['Extract Links'].select()
+    for imgnode in app_options['img_Nodes']:
+        window['_EXTRACT_OUTPUT_'].print(imgnode.img_url)
+        link_list_txt += imgnode.img_url
+
+
+def change_url_filter(window, values):
+    global link_list_txt
+    if not link_list_txt:
+        link_list_txt = values['_EXTRACT_OUTPUT_']
+
+    window['_EXTRACT_OUTPUT_'].Update('')
+    ftxt = values['_URL_FILTER_']
+    if len(ftxt) < 3:
+        window['_EXTRACT_OUTPUT_'].print(link_list_txt)
+        return
+
+    lists = link_list_txt.splitlines()
+    for ltxt in lists:
+        if ftxt.lower() in ltxt.lower():
+            window['_EXTRACT_OUTPUT_'].print(ltxt)
 
 
 def make_dir(dirpath):
@@ -324,12 +381,12 @@ def make_main_dir(app_options):
     make_dir(app_options['pic_dir'])
 
 
-def init(app_options, options, window):
+def init(app_options, options, window, mode):
     chrome_servie = fs.Service(executable_path=ChromeDriverManager().install())
     driver = webdriver.Chrome(service=chrome_servie, options=options)
     lnode = LinkNode(app_options['top_url'], None)
     linknodes = LinkNodes(app_options['top_url'], None, app_options)
-    linknodes.append_node(lnode)
+    linknodes.append_node(lnode, app_options)
     lnode.set_current_linknodes(linknodes)
     app_options['root_node'] = lnode
 
@@ -341,13 +398,13 @@ def init(app_options, options, window):
     app_options['log']("---root", text_color='blue')
 
     print('---root')
-    start(driver, linknodes, 1, app_options)
+    start(driver, linknodes, 1, app_options, mode)
     driver.quit()
 
 
-def create_another_process(app_options, window):
+def create_another_process(app_options, window, mode):
     options = init_selenium(app_options)
-    threading.Thread(target=init, args=(app_options, options, window,), daemon=True).start()
+    threading.Thread(target=init, args=(app_options, options, window, mode), daemon=True).start()
 
 
 def start_log_tab(window, app_options):
@@ -367,13 +424,16 @@ def loop_check_msg(window):
             break
 
         elif event == '_START_':
-            top_url = values['URL_input']
-            if not top_url:
-                continue
             click_start_button(window, values)
 
         elif event == '_STOP_':
             click_stop_button()
+
+        elif event == '_EXTRACT_LINK_':
+            click_start_button(window, values, 'extlink')
+
+        elif event == '_IMAGE_LINK_':
+            click_start_button(window, values, 'imglink')
 
         elif event == '_TREE_':
             values = values['_TREE_']
@@ -406,11 +466,22 @@ def loop_check_msg(window):
         elif event == '_SAVE_LIST_':
             save_list_text(values)
 
+        elif event == '_URL_FILTER_':
+            change_url_filter(window, values)
+
+        elif event == '_DOWNLOAD_ALL_':
+            dlr = Downloader(window, values['_EXTRACT_OUTPUT_'], default_dldir, 0)
+            dlr.start()
+
     if closeflg:
         window.close()
 
 
-def click_start_button(window, values):
+def click_start_button(window, values, mode='pdf'):
+    top_url = values['URL_input']
+    if not top_url:
+        return
+
     top_url = values['URL_input']
     if top_url[-1] == '?':
         top_url = top_url[:-1]
@@ -445,6 +516,10 @@ def click_start_button(window, values):
         'store_type': values['store_combo'],
         'random': str(random.randint(1000, 9999)),
         'log': window['Output'].print,
+        'all_links': set(),
+        'img_links': [],
+        'img_Nodes': [],
+        'ext_list_txt': "",
         'window': window
     }
     sys.setrecursionlimit(int(values['recursion_spin']))
@@ -453,8 +528,11 @@ def click_start_button(window, values):
     global stop_thread
     stop_thread = False
     window['_START_'].update(disabled=True)
+    window['_EXTRACT_LINK_'].update(disabled=True)
+    window['_IMAGE_LINK_'].update(disabled=True)
+
     start_log_tab(window, app_options)
-    create_another_process(app_options, window)
+    create_another_process(app_options, window, mode)
 
 
 def click_stop_button():
@@ -495,7 +573,7 @@ def read_pdf(pdfpath, cpage):
 
 
 def create_folder_tree(dir_path):
-    treedata = sg.TreeData()
+    tree = sg.TreeData()
     folder_icon = b'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsSAAALEgHS' \
                   b'3X78AAABnUlEQVQ4y8WSv2rUQRSFv7vZgJFFsQg2EkWb4AvEJ8hqKVilSmFn3iNvIAp21' \
                   b'oIW9haihBRKiqwElMVsIJjNrprsOr/5dyzml3UhEQIWHhjmcpn7zblw4B9lJ8Xag9mlmQb' \
@@ -518,15 +596,15 @@ def create_folder_tree(dir_path):
         for f in files:
             fullname = os.path.join(dirname, f)
             if os.path.isdir(fullname):
-                treedata.Insert(parent, fullname, f, values=[], icon=folder_icon)
+                tree.Insert(parent, fullname, f, values=[], icon=folder_icon)
                 add_files_in_folder(fullname, fullname)
             else:
                 path, ext = os.path.splitext(fullname)
                 if ext == '.pdf':
-                    treedata.Insert(parent, fullname, f, values=[], icon=file_icon)
+                    tree.Insert(parent, fullname, f, values=[], icon=file_icon)
 
     add_files_in_folder('', dir_path)
-    return treedata
+    return tree
 
 
 def refresh_pdf_viewer(pdf_path, cpage=0):
@@ -689,7 +767,18 @@ def create_window():
             [sg.T('', font='any 1')],
             [sg.T('', font='any 1')],
             [sg.T('', font='any 1')],
-            [sg.Button('Start', size=(24, 2), key='_START_'), sg.Button('Stop', size=(24, 2), key='_STOP_')]
+            [sg.Frame('', [
+                [sg.Button('Start', size=(24, 2), key='_START_', button_color=('white', 'royalblue')),
+                 sg.Button('Stop', size=(24, 2), key='_STOP_')],
+            ], background_color='gray')],
+            [sg.Frame('', [
+                [sg.Button('Extract All Website Links',
+                           button_color=('white', 'royalblue'), size=(24, 2), key='_EXTRACT_LINK_'),
+                 sg.Button('Extract All Image Links',
+                           button_color=('white', 'royalblue'), size=(24, 2), key='_IMAGE_LINK_')
+                 ]
+            ], background_color='gray')],
+
         ], vertical_alignment='top'),
          sg.Frame('', [
              [sg.InputCombo(('Allow URLs', 'Deny URLs', 'Allow Extensions', 'Deny Extensions'), size=(20, 1),
@@ -710,8 +799,15 @@ def create_window():
          sg.Image(data=None, key='image_viewer', size=(500, 700))
          ],
     ])
+    t4 = sg.Tab('Extract Links', [
+        [sg.Text('URL Filter'), sg.Input(size=(50, 1), enable_events=True, key='_URL_FILTER_')],
+        [sg.Multiline(size=(112, 30), font=('Consolas', 10), key='_EXTRACT_OUTPUT_')],
+        [sg.Button('Download All Files', size=(20, 2), key='_DOWNLOAD_ALL_')],
+        [sg.ProgressBar(100, orientation='h', size=(25, 15), key='_PROGRESS_BAR_', bar_color=('#39B60A', '#fff'))]
+    ])
+
     layout = [
-        [sg.TabGroup([[t1, t2, t3]])]
+        [sg.TabGroup([[t1, t2, t3, t4]])]
     ]
     return sg.Window("Web to PDF", layout, finalize=True)
 

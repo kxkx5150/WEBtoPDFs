@@ -36,39 +36,30 @@ class LinkNodes:
 
         self.link_nodes = []
 
-    def check_append(self, lnknod):
+    def check_append(self, lnknod, app_options):
         if len(self.allow_urls) > 0:
             for aurl in self.allow_urls:
                 if aurl[-1] == '/':
                     aurl = aurl.rsplit('/', 1)[0]
                     if lnknod.dirname == aurl:
-                        self.append_node(lnknod)
+                        self.append_node(lnknod, app_options)
                 else:
                     if lnknod.org_url == aurl:
-                        self.append_node(lnknod)
+                        self.append_node(lnknod, app_options)
         else:
             if not self.prntcheck:
                 if lnknod.dirname.find(self.top_dir) == 0:
-                    self.append_node(lnknod)
+                    self.append_node(lnknod, app_options)
             else:
                 if self.samedomain:
                     if lnknod.parse_url.netloc == self.prntnode.parse_url.netloc:
-                        self.append_node(lnknod)
+                        self.append_node(lnknod, app_options)
                 else:
-                    self.append_node(lnknod)
+                    self.append_node(lnknod, app_options)
 
-    def append_node(self, lnknod):
+    def append_node(self, lnknod, app_options):
         if lnknod.org_url.find(r'http:') != 0 and lnknod.org_url.find(r'https:') != 0:
             return
-
-        if len(self.allow_exts) > 0:
-            if lnknod.extension not in self.allow_exts:
-                return
-            else:
-                pass
-        else:
-            if lnknod.extension and lnknod.extension in self.deny_exts:
-                return
 
         if len(self.deny_urls) > 0:
             for durl in self.deny_urls:
@@ -79,6 +70,15 @@ class LinkNodes:
                 else:
                     if lnknod.org_url == durl:
                         return
+
+        app_options['all_links'].add(lnknod.org_url)
+
+        if len(self.allow_exts) > 0:
+            if lnknod.extension not in self.allow_exts:
+                return
+        else:
+            if lnknod.extension and lnknod.extension in self.deny_exts:
+                return
 
         for lnode in self.link_nodes:
             if lnode.org_url == lnknod.org_url:
