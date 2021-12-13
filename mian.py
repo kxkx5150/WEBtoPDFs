@@ -248,17 +248,21 @@ def start(driver, linknodes, crnt_depth, app_options, mode):
             app_options['log']('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url, text_color='blue')
             print('   ' * crnt_depth + 'pdf   : ' + crntnode.org_url)
             save_pdf(driver, crntnode, app_options)
+            if crnt_depth < app_options['depth']:
+                app_options['log']('   ' * crnt_depth + 'check : ' + crntnode.org_url, text_color='blue')
+                print('   ' * crnt_depth + 'check : ' + crntnode.org_url)
+                check_page(driver, crntnode, app_options)
+
         elif mode == 'imglink':
             get_image_links(driver, app_options)
 
-        if crntnode.dlimg_path and app_options['use_screenshot']:
-            create_screenshot(driver, crntnode.dlimg_path)
-
-        if crnt_depth < app_options['depth']:
-            app_options['log']('   ' * crnt_depth + 'check : ' + crntnode.org_url, text_color='blue')
-
-            print('   ' * crnt_depth + 'check : ' + crntnode.org_url)
-            check_page(driver, crntnode, app_options)
+        elif mode == 'extlink':
+            if crnt_depth <= app_options['depth']:
+                app_options['log']('   ' * crnt_depth + 'check : ' + crntnode.org_url, text_color='blue')
+                print('   ' * crnt_depth + 'check : ' + crntnode.org_url)
+                check_page(driver, crntnode, app_options)
+        # if crntnode.dlimg_path and app_options['use_screenshot']:
+        #     create_screenshot(driver, crntnode.dlimg_path)
 
     app_options['log']('')
     print('')
