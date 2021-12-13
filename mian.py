@@ -366,7 +366,6 @@ def make_dir(dirpath):
 
 def make_main_dir(app_options):
     diridx = 0
-    dlpath = ''
     dldir = app_options['os_downloads_path']
     while True:
         diridx += 1
@@ -471,7 +470,7 @@ def loop_check_msg(window):
 
         elif event == '_DOWNLOAD_ALL_':
             dlr = Downloader(window, values['_EXTRACT_OUTPUT_'], default_dldir, 0)
-            dlr.start()
+            dlr.create_thread()
 
     if closeflg:
         window.close()

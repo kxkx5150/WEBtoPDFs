@@ -1,8 +1,8 @@
 import os
 import sys
+import threading
 import time
 import urllib
-
 import requests
 
 
@@ -32,6 +32,9 @@ class Downloader:
                 self.default_dldir = dlpath
                 break
 
+    def create_thread(self):
+        threading.Thread(target=self.start, args=(), daemon=True).start()
+
     def start(self):
         if self.start_index < len(self.url_lists):
             self.download_file(self.url_lists[self.start_index])
@@ -51,16 +54,14 @@ class Downloader:
     def show_total_progress(self, val):
         self.window['_TOTAL_PROGRESS_BAR_'].UpdateBar(val)
 
-    def download_file(self, furl):
-        fname = urllib.parse.unquote(furl[furl.rfind('/') + 1:])
+    def download_file(self, file_url):
+        fname = urllib.parse.unquote(file_url[file_url.rfind('/') + 1:])
         file_name = self.default_dldir + os.sep + fname
-        link = self.url_lists[self.start_index]
+        total_length = int(requests.head(file_url).headers["content-length"])
+        response = requests.get(file_url, stream=True)
+
         try:
             with open(file_name, "wb") as f:
-                print("Downloading %s" % file_name)
-                response = requests.get(link, stream=True)
-                total_length = response.headers.get('content-length')
-
                 if total_length is None:
                     f.write(response.content)
                 else:
@@ -71,10 +72,9 @@ class Downloader:
                         f.write(data)
                         done = dl / total_length * 100
                         self.show_progress(done)
-
         except FileNotFoundError as e:
             print("FileNotFoundError", e)
-            print(link)
+            print(file_url)
             print(file_name)
 
         except Exception as e:
