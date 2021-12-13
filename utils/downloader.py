@@ -33,6 +33,7 @@ class Downloader:
                 break
 
     def create_thread(self):
+        self.window['_DOWNLOAD_ALL_'].update(disabled=True)
         threading.Thread(target=self.start, args=(), daemon=True).start()
 
     def start(self):
@@ -47,6 +48,7 @@ class Downloader:
 
         else:
             self.show_total_progress(100)
+            self.window['_DOWNLOAD_ALL_'].update(disabled=False)
 
     def show_progress(self, val):
         self.window['_PROGRESS_BAR_'].UpdateBar(val)
@@ -57,7 +59,14 @@ class Downloader:
     def download_file(self, file_url):
         fname = urllib.parse.unquote(file_url[file_url.rfind('/') + 1:])
         file_name = self.default_dldir + os.sep + fname
-        total_length = int(requests.head(file_url).headers["content-length"])
+        headers = requests.head(file_url).headers
+
+        try:
+            total_length = int(headers["content-length"])
+        except Exception as e:
+            print(e)
+            total_length = None
+
         response = requests.get(file_url, stream=True)
 
         try:
