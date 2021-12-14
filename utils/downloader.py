@@ -1,8 +1,10 @@
 import os
-import sys
+import re
 import threading
 import time
 import urllib
+from urllib.parse import urlparse
+
 import requests
 
 
@@ -57,8 +59,11 @@ class Downloader:
         self.window['_TOTAL_PROGRESS_BAR_'].UpdateBar(val)
 
     def download_file(self, file_url):
-        fname = urllib.parse.unquote(file_url[file_url.rfind('/') + 1:])
+        parse_url = urlparse(file_url)
+        fname = urllib.parse.unquote(parse_url.path[parse_url.path.rfind('/') + 1:])
+        fname = os.path.basename(fname)
         file_name = self.default_dldir + os.sep + fname
+        re.sub(r'[\\/:*?"<>|]+','',file_name)
         headers = requests.head(file_url).headers
 
         try:

@@ -207,8 +207,9 @@ def check_page(driver, crntnode, app_options):
 
 def start(driver, linknodes, crnt_depth, app_options, mode):
     if stop_thread:
-        app_options['window']['Log'].select()
+        app_options['window'][' Log '].select()
         app_options['log']("stop thread", text_color='white', background_color='red')
+        set_disabled_buttons(False)
         print("stop thread")
         return
 
@@ -305,6 +306,7 @@ def next_linknode(driver, linknodes, crnt_depth, app_options, mode):
                 elif mode == 'imglink':
                     create_image_links(app_options)
 
+                set_disabled_buttons(False)
                 break
 
             prntnode = lnknds.prntnode
@@ -397,10 +399,12 @@ def init(app_options, options, window, mode):
         print('root url error')
         return
 
-    make_main_dir(app_options)
-    app_options['log']("---root", text_color='blue')
+    if mode == 'pdf':
+        make_main_dir(app_options)
 
+    app_options['log']("---root", text_color='blue')
     print('---root')
+    
     start(driver, linknodes, 1, app_options, mode)
     driver.quit()
 
@@ -411,7 +415,7 @@ def create_another_process(app_options, window, mode):
 
 
 def start_log_tab(window, app_options):
-    window['Log'].select()
+    window[' Log '].select()
     app_options['log']("Program Start ...")
     pass
 
@@ -527,15 +531,34 @@ def click_start_button(window, values, mode='pdf'):
     }
     sys.setrecursionlimit(int(values['recursion_spin']))
     print('recursionlimit : ', sys.getrecursionlimit())
-
-    global stop_thread
-    stop_thread = False
-    window['_START_'].update(disabled=True)
-    window['_EXTRACT_LINK_'].update(disabled=True)
-    window['_IMAGE_LINK_'].update(disabled=True)
-
+    window['Output'].Update('')
+    clear_global_value()
+    set_disabled_buttons(True)
     start_log_tab(window, app_options)
     create_another_process(app_options, window, mode)
+
+
+def clear_global_value():
+    global stop_thread
+    global treedata
+    global pdf_path
+    global pdf_page
+    global open_dirs
+    # global link_list_txt
+
+    treedata = None
+    pdf_path = ""
+    pdf_page = 0
+    open_dirs = []
+    # link_list_txt = ""
+    stop_thread = False
+
+
+def set_disabled_buttons(val):
+    global window
+    window['_START_'].update(disabled=val)
+    window['_EXTRACT_LINK_'].update(disabled=val)
+    window['_IMAGE_LINK_'].update(disabled=val)
 
 
 def click_stop_button():
@@ -790,7 +813,7 @@ def create_window():
              [sg.Multiline(size=(49, 44), font=('Consolas', 10), key='_ALLOW_DENY_TEXT_')],
          ], vertical_alignment='top')]
     ])
-    t2 = sg.Tab('Log', [
+    t2 = sg.Tab(' Log ', [
         [sg.Multiline(size=(112, 46), font=('Consolas', 10), key='Output', disabled=True)],
     ])
     t3 = sg.Tab('PDF Tree View', [
