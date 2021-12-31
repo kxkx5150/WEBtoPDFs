@@ -759,7 +759,7 @@ def save_text(values, list_path):
 
 def create_window():
     global treedata
-    sg.theme('Default1')
+    sg.theme('SystemDefault')
     treedata = create_folder_tree(default_dldir)
 
     t1 = sg.Tab('Options', [
@@ -821,7 +821,7 @@ def create_window():
             [sg.Button('Refresh', size=(10, 1), key='_REFRESH_'), sg.Button('Delete', size=(10, 1), key='_DELETE_'),
              sg.Button('<', size=(1, 1), key='_PRE_PAGE_'), sg.Button('>', size=(1, 1), key='_NEXT_PAGE_')],
             [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
-                     key='_TREE_', enable_events=True, show_expanded=True)]]),
+                     key='_TREE_', enable_events=True, show_expanded=False)]]),
          sg.Image(data=None, key='image_viewer', size=(500, 700))
          ],
     ])
