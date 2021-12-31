@@ -29,5 +29,6 @@ store_type sequential
 python -m venv .\venv  
 .\venv\Scripts\activate  
 pip install -r requirements.txt  
+pip install -U PyMuPDF
 
 <br><br><br><br><br><br>
