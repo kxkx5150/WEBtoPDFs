@@ -1,6 +1,6 @@
 # WEBtoPDFs
-### Web pages to PDFs  
- 
+### Web pages to PDFs
+
 <br><br>
 
 same domain only option  
@@ -10,7 +10,7 @@ depth option
 use chrome profile  
 use google translate  
 store_type option  
-recursionlimit option  
+recursionlimit option
 
 <br><br><br>
 
@@ -29,6 +29,9 @@ store_type sequential
 python -m venv .\venv  
 .\venv\Scripts\activate  
 pip install -r requirements.txt  
-pip install -U PyMuPDF
+pip uninstall pymupdf  
+pip uninstall fitz  
+pip install pymupdf  
+python main.py
 
 <br><br><br><br><br><br>
