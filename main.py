@@ -575,11 +575,11 @@ def read_pdf(pdfpath, cpage):
     def get_page(pno):
         dlist = dlist_tab[pno]
         if not dlist:
-            dlist_tab[pno] = doc[pno].getDisplayList()
+            dlist_tab[pno] = doc[pno].get_displaylist()
             dlist = dlist_tab[pno]
         r = dlist.rect
-        pix = dlist.getPixmap(alpha=False)
-        return pix.getPNGData()
+        pix = dlist.get_pixmap(alpha=False)
+        return pix.tobytes()
 
     doc = fitz.open(pdfpath)
     page_count = len(doc)
@@ -821,7 +821,7 @@ def create_window():
             [sg.Button('Refresh', size=(10, 1), key='_REFRESH_'), sg.Button('Delete', size=(10, 1), key='_DELETE_'),
              sg.Button('<', size=(1, 1), key='_PRE_PAGE_'), sg.Button('>', size=(1, 1), key='_NEXT_PAGE_')],
             [sg.Tree(data=treedata, headings=[], auto_size_columns=True, num_rows=32, col0_width=30,
-                     key='_TREE_', enable_events=True, show_expanded=False, )]]),
+                     key='_TREE_', enable_events=True, show_expanded=True)]]),
          sg.Image(data=None, key='image_viewer', size=(500, 700))
          ],
     ])

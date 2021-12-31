@@ -29,9 +29,6 @@ store_type sequential
 python -m venv .\venv  
 .\venv\Scripts\activate  
 pip install -r requirements.txt  
-pip uninstall pymupdf  
-pip uninstall fitz  
-pip install pymupdf  
-python main.py
+python main.py  
 
 <br><br><br><br><br><br>
