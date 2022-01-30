@@ -36,7 +36,7 @@ link_list_txt = ""
 stop_thread = False
 user_dir = ''
 default_dldir = r'~/Downloads'
-
+default_dldir  = os.path.expanduser(default_dldir)
 logger = getLogger(__name__)
 handler = StreamHandler()
 handler.setLevel(DEBUG)
@@ -47,13 +47,16 @@ logger.propagate = False
 pltfrm = platform.system()
 if pltfrm == 'Darwin':
     user_dir = r'~/Library/Application Support/Google/Chrome'
+    user_dir  = os.path.expanduser(user_dir)
+
 elif pltfrm == 'Windows':
     user_dir = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + \
                f'{os.sep}AppData{os.sep}Local{os.sep}Google{os.sep}Chrome{os.sep}User Data'
     default_dldir = f'C:{os.sep}Users{os.sep}' + os.environ['USERNAME'] + f'{os.sep}Downloads'
 else:
     user_dir = r'~/.config/google-chrome'
-
+    user_dir  = os.path.expanduser(user_dir)
+print("")
 
 def init_selenium(app_options):
     global user_dir
